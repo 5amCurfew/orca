@@ -46,17 +46,23 @@ var rootCmd = &cobra.Command{
 				Command: `sleep 2 && echo "Task 5"`,
 				Status:  "pending",
 			},
+			"task6": {
+				Name:    "task6",
+				Command: `sleep 1 && echo "Task 6"`,
+				Status:  "pending",
+			},
 		}
 
 		g := lib.NewGraph()
-		nodes := make(map[string]string)
+		nodes := make(map[string]struct{})
 		for task := range tasks {
-			nodes[task] = task
+			nodes[task] = struct{}{}
 		}
 		g.AddNodes(nodes)
 		g.DependOn("task3", "task1")
 		g.DependOn("task3", "task2")
 		g.DependOn("task4", "task1")
+		g.DependOn("task6", "task4")
 
 		g.CreateTopologicalLayers()
 

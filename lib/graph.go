@@ -2,7 +2,7 @@ package lib
 
 import "errors"
 
-type nodeSet map[string]string
+type nodeSet map[string]struct{}
 type depencyMap map[string]nodeSet
 
 func addEdge(dm depencyMap, from, to string) {
@@ -11,7 +11,7 @@ func addEdge(dm depencyMap, from, to string) {
 		nodes = make(nodeSet)
 		dm[from] = nodes
 	}
-	nodes[to] = to
+	nodes[to] = struct{}{}
 }
 
 type Graph struct {
@@ -43,8 +43,8 @@ func (g *Graph) DependOn(child, parent string) error {
 	}
 
 	// Add Nodes
-	g.Nodes[parent] = parent
-	g.Nodes[child] = child
+	g.Nodes[parent] = struct{}{}
+	g.Nodes[child] = struct{}{}
 
 	// Add Edges
 	addEdge(g.Parents, child, parent)
@@ -70,10 +70,10 @@ func (g *Graph) findDependencies(node string, out nodeSet) {
 		return
 	}
 
-	for _, nextNode := range g.Children[node] {
-		if _, ok := out[nextNode]; !ok {
-			out[nextNode] = nextNode
-			g.findDependencies(nextNode, out)
+	for key, nextNode := range g.Children[node] {
+		if _, ok := out[key]; !ok {
+			out[key] = nextNode
+			g.findDependencies(key, out)
 		}
 	}
 }
