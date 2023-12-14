@@ -18,6 +18,7 @@ type Graph struct {
 	Nodes    nodeSet    `json:"nodes"`
 	Parents  depencyMap `json:"parents"`
 	Children depencyMap `json:"children"`
+	Layers   [][]string `json:"layers"`
 }
 
 func NewGraph() *Graph {
@@ -26,6 +27,10 @@ func NewGraph() *Graph {
 		Parents:  make(depencyMap),
 		Children: make(depencyMap),
 	}
+}
+
+func (g *Graph) AddNodes(nodes nodeSet) {
+	g.Nodes = nodes
 }
 
 func (g *Graph) DependOn(child, parent string) error {
@@ -83,4 +88,8 @@ func (g *Graph) Leaves() []string {
 	}
 
 	return leaves
+}
+
+func (g *Graph) CreateTopologicalLayers() {
+	g.Layers = Sort(g)
 }

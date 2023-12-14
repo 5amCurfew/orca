@@ -1,6 +1,6 @@
 package lib
 
-func Sort(g Graph) [][]string {
+func Sort(g *Graph) [][]string {
 	gTemp := copyGraph(g)
 	layers := [][]string{}
 
@@ -64,7 +64,7 @@ func copyDepencyMap(m depencyMap) depencyMap {
 	return out
 }
 
-func copyGraph(g Graph) Graph {
+func copyGraph(g *Graph) Graph {
 	return Graph{
 		Parents:  copyDepencyMap(g.Parents),
 		Children: copyDepencyMap(g.Children),
