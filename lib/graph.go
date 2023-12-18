@@ -15,22 +15,26 @@ func addEdge(dm depencyMap, from, to string) {
 }
 
 type Graph struct {
-	Nodes    nodeSet    `json:"nodes"`
-	Parents  depencyMap `json:"parents"`
-	Children depencyMap `json:"children"`
-	Layers   [][]string `json:"layers"`
+	Tasks    map[string]*Task `json:"tasks"`
+	Nodes    nodeSet          `json:"nodes"`
+	Parents  depencyMap       `json:"parents"`
+	Children depencyMap       `json:"children"`
+	Layers   [][]string       `json:"layers"`
 }
 
-func NewGraph() *Graph {
+func NewGraph(tasks map[string]*Task) *Graph {
 	return &Graph{
+		Tasks:    tasks,
 		Nodes:    make(nodeSet),
 		Parents:  make(depencyMap),
 		Children: make(depencyMap),
 	}
 }
 
-func (g *Graph) AddNodes(nodes nodeSet) {
-	g.Nodes = nodes
+func (g *Graph) AddNodes() {
+	for task := range g.Tasks {
+		g.Nodes[task] = struct{}{}
+	}
 }
 
 func (g *Graph) DependOn(child, parent string) error {

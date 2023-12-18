@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	lib "github.com/5amCurfew/orca/lib"
 	"github.com/spf13/cobra"
@@ -38,7 +37,7 @@ var rootCmd = &cobra.Command{
 			},
 			"task4": {
 				Name:    "task4",
-				Command: `sleep 4 && echo "Task 4"`,
+				Command: `sleep 1 && echo "Task 4"`,
 				Status:  "pending",
 			},
 			"task5": {
@@ -48,32 +47,45 @@ var rootCmd = &cobra.Command{
 			},
 			"task6": {
 				Name:    "task6",
-				Command: `sleep 1 && echo "Task 6"`,
+				Command: `sleep 2 && echo "Task 6"`,
+				Status:  "pending",
+			},
+			"task7": {
+				Name:    "task7",
+				Command: `sleep 1 && echo "Task 7"`,
+				Status:  "pending",
+			},
+			"task8": {
+				Name:    "task8",
+				Command: `sleep 0.5 && echo "Task 8"`,
 				Status:  "pending",
 			},
 		}
 
-		g := lib.NewGraph()
+		g := lib.NewGraph(tasks)
+
 		nodes := make(map[string]struct{})
 		for task := range tasks {
 			nodes[task] = struct{}{}
 		}
-		g.AddNodes(nodes)
+		g.AddNodes()
 		g.DependOn("task3", "task1")
 		g.DependOn("task3", "task2")
 		g.DependOn("task4", "task1")
 		g.DependOn("task6", "task4")
+		g.DependOn("task6", "task5")
+		g.DependOn("task4", "task3")
+		g.DependOn("task7", "task2")
+		g.DependOn("task8", "task1")
 
 		g.CreateTopologicalLayers()
 
 		jsonData, _ := json.MarshalIndent(g, "", "  ")
 		fmt.Println(string(jsonData))
 
-		for i, layer := range g.Layers {
-			fmt.Printf("%d: %s\n", i, strings.Join(layer, ", "))
-		}
-
-		lib.ExecuteTasks(g.Layers, tasks)
+		// lib.ExecuteLayers(g.Layers, tasks)
+		fmt.Println("--------")
+		lib.ExecuteDAG(g)
 
 	},
 }
