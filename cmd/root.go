@@ -24,11 +24,10 @@ var rootCmd = &cobra.Command{
 		g.AddNodes()
 		lib.ParseDependencies("test.orca", g)
 		g.CreateTopologicalLayers()
-
 		jsonData, _ := json.MarshalIndent(g, "", "  ")
 		fmt.Println(string(jsonData))
-		lib.ExecuteDAG(g)
 
+		lib.ExecuteDAG(g)
 	},
 }
 

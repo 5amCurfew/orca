@@ -31,7 +31,7 @@ func ParseTasks(filename string) (map[string]*Task, error) {
 		case strings.HasPrefix(line, "desc"):
 			fields := strings.Split(line, "=")
 			currentField = "desc"
-			currentTask.Description = strings.TrimSpace(fields[1])
+			currentTask.Desc = strings.TrimSpace(fields[1])
 		case strings.HasPrefix(line, "cmd"):
 			fields := strings.Split(line, "=")
 			currentField = "cmd"
@@ -42,7 +42,7 @@ func ParseTasks(filename string) (map[string]*Task, error) {
 			currentField = ""
 		default:
 			if currentField == "desc" {
-				currentTask.Description += " " + strings.TrimSpace(line)
+				currentTask.Desc += " " + strings.TrimSpace(line)
 			} else if currentField == "cmd" {
 				currentTask.Command += " " + strings.TrimSpace(line)
 			}

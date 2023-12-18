@@ -18,10 +18,10 @@ const (
 
 // Task represents a task in the DAG.
 type Task struct {
-	Name        string
-	Description string
-	Command     string
-	Status      TaskStatus
+	Name    string
+	Desc    string
+	Command string
+	Status  TaskStatus
 }
 
 // ExecuteTask simulates the execution of a task
