@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -53,7 +52,6 @@ func main() {
 		g.AddNodes()
 		lib.ParseDependencies(filePath, g)
 		g.CreateTopologicalLayers()
-		jsonData, err := json.MarshalIndent(g, "", "  ")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to marshal JSON: %s", err)})
 			return
@@ -63,8 +61,7 @@ func main() {
 		lib.ExecuteDAG(g)
 
 		c.JSON(http.StatusOK, gin.H{
-			"message": "DAG execution completed",
-			"result":  string(jsonData),
+			"message": fmt.Sprintf("DAG %s execution completed", filePath),
 		})
 	})
 
