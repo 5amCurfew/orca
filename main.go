@@ -14,7 +14,7 @@ import (
 // curl -X POST \
 // http://localhost:8080/execute \
 // -H 'Content-Type: application/json' \
-// -d '{"file_path": "test.orca"}'
+// -d '{"file_path": "dags/test.orca"}'
 
 func main() {
 	rest := gin.Default()
