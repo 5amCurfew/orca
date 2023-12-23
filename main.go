@@ -9,10 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// curl https://localhost:8080/ping
+// curl http://localhost:8080/ping
 
 // curl -X POST \
-// https://localhost:8080/execute \
+// http://localhost:8080/execute \
 // -H 'Content-Type: application/json' \
 // -d '{"file_path": "test.orca"}'
 
