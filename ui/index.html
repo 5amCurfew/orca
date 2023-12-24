@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orca</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        #sidebar {
+            width: 200px;
+            background-color: #f1f1f1;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            text-align: left;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>DAGs</h2>
+        <div id="dagButtons"></div>
+    </div>
+
+    <div id="content">
+        <h1>Main Content</h1>
+        <!-- Add your main content here -->
+    </div>
+
+    <script>
+        function updateSidebar() {
+            // Fetch the list of files in the "dags" directory
+            // Replace this with your server-side logic to fetch the file list
+            fetch('/dags')
+                .then(response => response.json())
+                .then(data => {
+                    const dagButtonsContainer = document.getElementById('dagButtons');
+                    dagButtonsContainer.innerHTML = '';
+
+                    // Create a button for each file
+                    data.forEach(fileName => {
+                        const button = document.createElement('button');
+                        button.textContent = fileName;
+                        button.addEventListener('click', () => {
+                            // Handle button click, e.g., trigger a function to execute the DAG
+                            alert(`Execute DAG: ${fileName}`);
+                        });
+                        dagButtonsContainer.appendChild(button);
+                    });
+                });
+        }
+
+        // Initial update
+        updateSidebar();
+
+        // Update the sidebar every 10 seconds
+        setInterval(updateSidebar, 10000);
+    </script>
+</body>
+</html>
