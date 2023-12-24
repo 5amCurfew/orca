@@ -19,7 +19,7 @@ func main() {
 	rest := gin.Default()
 
 	rest.GET("/ping", func(c *gin.Context) {
-		routes.Pong(c)
+		routes.Ping(c)
 	})
 
 	rest.POST("/execute", func(c *gin.Context) {
