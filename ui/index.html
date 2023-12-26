@@ -3,56 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orca</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-        }
-
-        #sidebar {
-            width: 200px;
-            background-color: #f1f1f1;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #content {
-            flex-grow: 1;
-            padding: 20px;
-        }
-
-        button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            text-align: left;
-            background-color: #ddd;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #bbb;
-        }
-    </style>
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="ui/style.css">
 </head>
 <body>
     <div id="sidebar">
-        <h2>DAGs</h2>
         <div id="dagButtons"></div>
     </div>
 
-    <div id="content">
-        <h1>Main Content</h1>
-        <!-- Add your main content here -->
+    <div id="content" style="display: flex; flex-direction: column;">
+
+        <!-- Run Button -->
+        <button id="runButton" style="width: 100%;">
+            ▶️ Run
+        </button>
+    
+        <!-- Panels Container -->
+        <div style="display: flex; flex-wrap: wrap;">
+    
+            <!-- Left Panel: Graph Diagram of the DAG -->
+            <div id="graphPanel">
+                {{.graphHTML}}
+            </div>
+    
+            <!-- Right Panel: Status of the Last 10 Runs -->
+            <div id="statusPanel">
+                {{.statusHTML}}
+            </div>
+    
+        </div>
+    
     </div>
 
     <script>
+
         function updateSidebar() {
             // Fetch the list of files in the "dags" directory
             // Replace this with your server-side logic to fetch the file list
@@ -67,17 +51,77 @@
                         const button = document.createElement('button');
                         button.textContent = fileName;
                         button.addEventListener('click', () => {
-                            // Handle button click, e.g., trigger a function to execute the DAG
-                            alert(`Execute DAG: ${fileName}`);
+                            window.location.hash = fileName;
                         });
                         dagButtonsContainer.appendChild(button);
                     });
                 });
         }
 
+        function updateGraphPanel() {
+            const panel = document.getElementById('graphPanel');
+            const currentHash = window.location.hash.substring(1); // Exclude the '#' symbol
+
+            fetch(`/graph`, {
+                method: "POST",
+                body: JSON.stringify({ file_path: 'dags/'+currentHash }),
+            })
+            .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
+            .then(data => {
+                // Update the HTML content in the graph panel
+                panel.innerHTML = data.html;
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                // Handle errors as needed
+            });
+        }
+
+        function updateStatusPanel() {
+            const panel = document.getElementById('statusPanel');
+            const currentHash = window.location.hash.substring(1); // Exclude the '#' symbol
+
+            fetch(`/status`, {
+                method: "POST",
+                body: JSON.stringify({ file_path: 'dags/'+currentHash }),
+            })
+            .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
+            .then(data => {
+                // Update the HTML content in the graph panel
+                panel.innerHTML = data.html;
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                // Handle errors as needed
+            });
+        }
+
+        // Play Button Click Event
+        const playButton = document.getElementById('runButton');
+        playButton.addEventListener('click', () => {
+            const currentHash = window.location.hash.substring(1); // Exclude the '#' symbol
+
+            // Send a POST request to the execute route
+            fetch('/execute', {
+                method: 'POST',
+                body: JSON.stringify({ file_path: 'dags/'+currentHash }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle the response if needed
+                console.log('Execution response:', data);
+            })
+            .catch(error => {
+                console.error('Error executing DAG:', error);
+            });
+        });
+
+        // Attach the updateGraphPanel function to the hashchange event
+        window.addEventListener('hashchange', updateGraphPanel);
+        window.addEventListener('hashchange', updateStatusPanel);
+
         // Initial update
         updateSidebar();
-
         // Update the sidebar every 10 seconds
         setInterval(updateSidebar, 10000);
     </script>

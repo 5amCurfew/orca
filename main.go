@@ -14,11 +14,16 @@ import (
 
 func main() {
 	router := gin.Default()
+
+	router.Static("/ui", "./ui")
 	router.LoadHTMLGlob("ui/*.html")
 
 	router.GET("/ping", routes.Ping)
-	router.GET("/dags", routes.Dags)
 	router.GET("/ui", routes.UI)
+
+	router.GET("/dags", routes.Dags)
+	router.POST("/graph", routes.Graph)
+	router.POST("/status", routes.Status)
 	router.POST("/execute", routes.Execute)
 
 	if err := router.Run(":8080"); err != nil {

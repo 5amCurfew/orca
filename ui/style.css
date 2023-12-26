@@ -1,0 +1,51 @@
+body {
+    font-family: FreeMono, monospace;
+    margin: 5%;
+    display: flex;
+    border: 1px dashed black;
+}
+
+.placeholder {
+    color: #888;
+    font-size: 100%;
+}
+
+#sidebar {
+    width: 20%;
+    background-color: #f1f1f1;
+    border: 1px solid red;
+    padding: 2%;
+}
+
+#content {
+    flex-grow: 1;
+    border: 1px solid blue;
+    padding: 2%;
+}
+
+#graphPanel {
+    flex: 1;
+    border: 1px solid green;
+}
+
+#statusPanel {
+    flex: 1; 
+    border: 1px solid orange;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: left;
+    background-color: #ddd;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border: 1px solid blue;
+}
+
+button:hover {
+    background-color: #bbb;
+}
