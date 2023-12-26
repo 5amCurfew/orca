@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -30,12 +31,11 @@ func Execute(c *gin.Context) {
 		return
 	}
 
+	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
 	g.ExecuteDAG()
 
 	c.JSON(http.StatusOK, gin.H{
+		"graph":   string(jsonRepresentation),
 		"message": fmt.Sprintf("DAG %s execution completed", filePath),
 	})
-
-	// jsonRep, _ := json.MarshalIndent(g, "", "  ")
-	// fmt.Println(string(jsonRep))
 }

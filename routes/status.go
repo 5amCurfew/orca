@@ -24,7 +24,7 @@ func Status(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"html":    fmt.Sprintf("<div class=\"placeholder\">%s selected</div>", filePath),
+		"graph":   fmt.Sprintf("<div class=\"placeholder\">%s selected</div>", filePath),
 		"message": fmt.Sprintf("DAG %s graph created", filePath),
 	})
 }

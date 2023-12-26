@@ -23,7 +23,6 @@ type Graph struct {
 	Nodes    nodeSet          `json:"nodes"`
 	Parents  depencyMap       `json:"parents"`
 	Children depencyMap       `json:"children"`
-	Layers   [][]string       `json:"layers"`
 }
 
 func NewGraph(filePath string) (*Graph, error) {

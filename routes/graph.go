@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -24,19 +25,16 @@ func Graph(c *gin.Context) {
 		return
 	}
 
-	_, err := lib.NewGraph(filePath)
+	g, err := lib.NewGraph(filePath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse DAG: %s", err)})
 		return
 	}
 
-	// g.GenerateGraphHTML()
+	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
 
 	c.JSON(http.StatusOK, gin.H{
-		"html":    fmt.Sprintf("<div class=\"placeholder\">%s selected</div>", filePath),
+		"graph":   string(jsonRepresentation),
 		"message": fmt.Sprintf("DAG %s graph created", filePath),
 	})
-
-	// jsonRep, _ := json.MarshalIndent(g, "", "  ")
-	// fmt.Println(string(jsonRep))
 }
