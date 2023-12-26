@@ -27,7 +27,6 @@ func getDagFiles(directory string) ([]string, error) {
 }
 
 func Dags(c *gin.Context) {
-	// Replace this with logic to fetch the list of files in the "dags" directory
 	dagFiles, err := getDagFiles("dags")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

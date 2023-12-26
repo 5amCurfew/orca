@@ -34,7 +34,7 @@ func Graph(c *gin.Context) {
 	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
 
 	c.JSON(http.StatusOK, gin.H{
-		"graph":   string(jsonRepresentation),
+		"graph":   json.RawMessage(jsonRepresentation),
 		"message": fmt.Sprintf("DAG %s graph created", filePath),
 	})
 }

@@ -35,7 +35,7 @@ func Execute(c *gin.Context) {
 	g.ExecuteDAG()
 
 	c.JSON(http.StatusOK, gin.H{
-		"graph":   string(jsonRepresentation),
+		"graph":   json.RawMessage(jsonRepresentation),
 		"message": fmt.Sprintf("DAG %s execution completed", filePath),
 	})
 }

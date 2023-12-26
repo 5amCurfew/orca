@@ -1,7 +1,12 @@
-body {
+html, body {
+    height: 100%;
+    margin: 0;
     font-family: FreeMono, monospace;
-    margin: 5%;
+}
+
+body {
     display: flex;
+    height: 100%;
     border: 1px dashed black;
 }
 
@@ -11,29 +16,41 @@ body {
 }
 
 #sidebar {
-    width: 20%;
+    flex: 0 0 20%;
     background-color: #f1f1f1;
     border: 1px solid red;
     padding: 2%;
 }
 
 #content {
-    flex-grow: 1;
+    flex: 1; /* Use flex: 1 to take up remaining space */
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
     border: 1px solid blue;
     padding: 2%;
+    height: 100%;
 }
 
-#graphPanel {
-    flex: 1;
-    border: 1px solid green;
-}
-
+#graphPanel,
 #statusPanel {
-    flex: 1; 
-    border: 1px solid orange;
+    flex: 1; /* Distribute remaining space equally */
+    display: flex;
+    border: 1px solid black;
 }
+
+.node {
+    fill: #fff;
+    stroke: black;
+    stroke-width: 2px;
+  }
+
+.link {
+    stroke: blue; /* Set the color to blue */
+    stroke-opacity: 0.6;
+  }
 
 button {
+    font-family: FreeMono, monospace;
     display: block;
     width: 100%;
     padding: 10px;
