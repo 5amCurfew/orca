@@ -20,27 +20,23 @@ func Graph(c *gin.Context) {
 	// Extract orca file path from the request
 	filePath, ok := requestData["file_path"].(string)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing orca file_path"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_path required"})
 		return
 	}
 
-	tasks, err := lib.ParseTasks(filePath)
+	_, err := lib.NewGraph(filePath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse tasks: %s", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse DAG: %s", err)})
 		return
 	}
 
-	g := lib.NewGraph(tasks)
-	g.AddNodes()
-	lib.ParseDependencies(filePath, g)
-	g.CreateTopologicalLayers()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to marshal JSON: %s", err)})
-		return
-	}
+	// g.GenerateGraphHTML()
 
 	c.JSON(http.StatusOK, gin.H{
 		"html":    fmt.Sprintf("<div class=\"placeholder\">%s selected</div>", filePath),
 		"message": fmt.Sprintf("DAG %s graph created", filePath),
 	})
+
+	// jsonRep, _ := json.MarshalIndent(g, "", "  ")
+	// fmt.Println(string(jsonRep))
 }

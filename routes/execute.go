@@ -20,30 +20,22 @@ func Execute(c *gin.Context) {
 	// Extract orca file path from the request
 	filePath, ok := requestData["file_path"].(string)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing orca file_path"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_path required"})
 		return
 	}
 
-	// Your DAG execution logic here
-	tasks, err := lib.ParseTasks(filePath)
+	g, err := lib.NewGraph(filePath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse tasks: %s", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse DAG: %s", err)})
 		return
 	}
 
-	g := lib.NewGraph(tasks)
-	g.AddNodes()
-	lib.ParseDependencies(filePath, g)
-	g.CreateTopologicalLayers()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to marshal JSON: %s", err)})
-		return
-	}
-
-	// Execute DAG
-	lib.ExecuteDAG(g)
+	g.ExecuteDAG()
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": fmt.Sprintf("DAG %s execution completed", filePath),
 	})
+
+	// jsonRep, _ := json.MarshalIndent(g, "", "  ")
+	// fmt.Println(string(jsonRep))
 }

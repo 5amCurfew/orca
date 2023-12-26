@@ -2,12 +2,13 @@ package lib
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
 
-func ParseTasks(filename string) (map[string]*Task, error) {
-	file, err := os.Open(filename)
+func parseTasks(filePath string) (map[string]*Task, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +57,8 @@ func ParseTasks(filename string) (map[string]*Task, error) {
 	return tasks, nil
 }
 
-func ParseDependencies(filename string, g *Graph) error {
-	file, err := os.Open(filename)
+func parseDependencies(filePath string, g *Graph) error {
+	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
@@ -85,11 +86,18 @@ func ParseDependencies(filename string, g *Graph) error {
 				}
 
 				for _, dependency := range dependencyList {
-					g.DependOn(dependentTask, dependency)
+					err := g.DependOn(dependentTask, dependency)
+					if err != nil {
+						fmt.Println(err.Error())
+						return err
+					}
 				}
 			} else {
 				// Case where there is a single dependency
-				g.DependOn(dependentTask, dependencies)
+				err := g.DependOn(dependentTask, dependencies)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

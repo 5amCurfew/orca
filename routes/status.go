@@ -19,7 +19,7 @@ func Status(c *gin.Context) {
 	// Extract orca file path from the request
 	filePath, ok := requestData["file_path"].(string)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing orca file_path"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_path required"})
 		return
 	}
 
