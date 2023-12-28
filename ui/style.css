@@ -28,7 +28,6 @@ body {
     flex-direction: column; /* Stack children vertically */
     border: 1px solid blue;
     padding: 2%;
-    height: 100%;
 }
 
 #graphPanel,
@@ -37,17 +36,6 @@ body {
     display: flex;
     border: 1px solid black;
 }
-
-.node {
-    fill: #fff;
-    stroke: black;
-    stroke-width: 2px;
-  }
-
-.link {
-    stroke: blue; /* Set the color to blue */
-    stroke-opacity: 0.6;
-  }
 
 button {
     font-family: FreeMono, monospace;

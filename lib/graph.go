@@ -6,23 +6,22 @@ import (
 	"sync"
 )
 
-type nodeSet map[string]struct{}
-type depencyMap map[string]nodeSet
+type depencyMap map[string]map[string]struct{}
 
 func addEdge(dm depencyMap, from, to string) {
 	nodes, ok := dm[from]
 	if !ok {
-		nodes = make(nodeSet)
+		nodes = make(map[string]struct{})
 		dm[from] = nodes
 	}
 	nodes[to] = struct{}{}
 }
 
 type Graph struct {
-	Tasks    map[string]*Task `json:"tasks"`
-	Nodes    nodeSet          `json:"nodes"`
-	Parents  depencyMap       `json:"parents"`
-	Children depencyMap       `json:"children"`
+	Tasks    map[string]*Task    `json:"tasks"`
+	Nodes    map[string]struct{} `json:"nodes"`
+	Parents  depencyMap          `json:"parents"`
+	Children depencyMap          `json:"children"`
 }
 
 func NewGraph(filePath string) (*Graph, error) {
@@ -34,7 +33,7 @@ func NewGraph(filePath string) (*Graph, error) {
 
 	g := &Graph{
 		Tasks:    tasks,
-		Nodes:    make(nodeSet),
+		Nodes:    make(map[string]struct{}),
 		Parents:  make(depencyMap),
 		Children: make(depencyMap),
 	}
@@ -84,13 +83,13 @@ func (g *Graph) dependsOn(child, parent string) bool {
 	return ok
 }
 
-func (g *Graph) dependencies(root string) nodeSet {
-	out := make(nodeSet)
+func (g *Graph) dependencies(root string) map[string]struct{} {
+	out := make(map[string]struct{})
 	g.findDependencies(root, out)
 	return out
 }
 
-func (g *Graph) findDependencies(node string, out nodeSet) {
+func (g *Graph) findDependencies(node string, out map[string]struct{}) {
 	if _, ok := g.Nodes[node]; !ok {
 		return
 	}
