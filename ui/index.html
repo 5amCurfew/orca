@@ -16,7 +16,7 @@
     <div id="content">
 
         <!-- Run Button -->
-        <button id="runButton" style="width: 100%;">
+        <button id="executeButton" style="width: 100%;">
             ▶️ Run
         </button>
     
@@ -41,7 +41,7 @@
         // Attach the updateGraphPanel function to the hashchange event
         window.addEventListener('hashchange', updateGraphPanel);
         window.addEventListener('hashchange', updateStatusPanel);
-        document.getElementById('runButton').addEventListener('click', manualRun)
+        document.getElementById('executeButton').addEventListener('click', Execute)
 
         // Initial update
         updateSidebar();

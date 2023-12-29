@@ -1,4 +1,4 @@
-function manualRun() {
+function Execute() {
     const currentHash = window.location.hash.substring(1); // Exclude the '#' symbol
 
     // Send a POST request to the execute route
