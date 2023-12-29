@@ -9,39 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type GraphJSON struct {
-	Tasks    map[string]*lib.Task `json:"tasks"`
-	Nodes    map[string]struct{}  `json:"nodes"`
-	Parents  map[string][]string  `json:"parents"`
-	Children map[string][]string  `json:"children"`
-}
-
-func convertToGraphJSON(input lib.Graph) GraphJSON {
-	out := GraphJSON{}
-	out.Tasks = input.Tasks
-	out.Nodes = input.Nodes
-	out.Parents = make(map[string][]string)
-	out.Children = make(map[string][]string)
-
-	for key := range input.Parents {
-		out.Parents[key] = mapToJSONArray(input.Parents[key])
-	}
-
-	for key := range input.Children {
-		out.Children[key] = mapToJSONArray(input.Children[key])
-	}
-
-	return out
-}
-
-func mapToJSONArray(input map[string]struct{}) []string {
-	keys := make([]string, 0, len(input))
-	for key := range input {
-		keys = append(keys, key)
-	}
-	return keys
-}
-
 func Graph(c *gin.Context) {
 	var requestData map[string]interface{}
 
@@ -64,9 +31,7 @@ func Graph(c *gin.Context) {
 		return
 	}
 
-	gJSON := convertToGraphJSON(*g)
-	jsonRepresentation, _ := json.MarshalIndent(gJSON, "", "  ")
-	fmt.Println(string(jsonRepresentation))
+	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
 
 	c.JSON(http.StatusOK, gin.H{
 		"graph":   json.RawMessage(jsonRepresentation),

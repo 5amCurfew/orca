@@ -48,8 +48,7 @@ function updateGraphPanel() {
     .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
     .then(data => {
         d3.select("#graphPanel").selectAll("*").remove()
-        console.log(data.graph)
-        createDAGDiagram(data.graph)
+        createTreeDiagram(data.graph);
     })
     .catch(error => {
         console.error('Error fetching data:', error);
@@ -67,8 +66,7 @@ function updateStatusPanel() {
     })
     .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
     .then(data => {
-        // Update the HTML content in the graph panel
-        panel.innerHTML = data.graph;
+        console.log('updateStatusPanel')
     })
     .catch(error => {
         console.error('Error fetching data:', error);
@@ -76,81 +74,123 @@ function updateStatusPanel() {
     });
 }
 
-function createDAGDiagram(data) {
-    const graphPanel = document.getElementById("graphPanel");
-
-    // Get the dimensions of the parent div
-    const width = graphPanel.clientWidth;
-    const height = 600;
-
-    const svg = d3.select("#graphPanel").append("svg")
-        .attr("width", width)
-        .attr("height", height);
-
-    // Add arrowhead marker definition
-    svg.append("defs").append("marker")
-        .attr("id", "arrowhead")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 80)
-        .attr("refY", 0)
-        .attr("markerWidth", 20)
-        .attr("markerHeight", 10)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
-        .attr("class", "arrowhead-path");
-
-    const nodes = Object.keys(data.nodes).map(node => ({ id: node }));
-    const links = [];
-
-    for (const parent in data.children) {
-        for (const child of data.children[parent]) {
-            links.push({ source: nodes.find(n => n.id === parent), target: nodes.find(n => n.id === child) });
-        }
-    }
-
-    const simulation = d3.forceSimulation(nodes)
-        .force("charge", d3.forceManyBody().strength(-200))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("link", d3.forceLink(links).id(d => d.id).strength(0.1).distance(150).iterations(10));
-
-    const link = svg.selectAll(".link")
-        .data(links)
-        .enter().append("line")
-        .attr("class", "link")
-        .attr("marker-end", "url(#arrowhead)")  // Add arrowhead marker
-        .style("stroke", "#000");
-
-    const node = svg.selectAll(".node")
-        .data(nodes)
-        .enter().append("rect") // Use "rect" instead of "circle" for rectangles
-        .attr("class", "node")
-        .attr("width", d => (d.id.length * 10) + 20) // Set the width of the rectangle
-        .attr("height", 20) // Set the height of the rectangle
-        .attr("stroke", "black")
-        .attr("fill", "white");
-
-    const labels = svg.selectAll(".label")
-        .data(nodes)
-        .enter().append("text")
-        .attr("class", "label")
-        .text(d => d.id)
-        .attr("text-anchor", "middle") // Center the text horizontally
-        .attr("dominant-baseline", "middle") // Center the text vertically
-
-    simulation.on("tick", () => {
-        link
-            .attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
-
-        node
-            .attr("x", d => d.x - (d.id.length * 10 + 20)/2) // Adjust the positioning based on rectangle width
-            .attr("y", d => d.y); // Adjust the positioning based on rectangle height
-
-        labels
-            .attr("x", d => d.x) // Adjust based on half the width of the rectangle
-            .attr("y", d => d.y + 10); // Adjust based on half the height of the rectangle
-    });
+function createTreeDiagram(data) {
+const treeData = {
+    "name": "Eve",
+    "value": 15,
+    "type": "black",
+    "level": "yellow",
+    "children": [
+      {
+        "name": "Cain",
+        "value": 10,
+        "type": "grey",
+        "level": "red"
+      },
+      {
+        "name": "Seth",
+        "value": 10,
+        "type": "grey",
+        "level": "red",
+        "children": [
+          {
+            "name": "Enos",
+            "value": 7.5,
+            "type": "grey",
+            "level": "purple"
+          },
+          {
+            "name": "Noam",
+            "value": 7.5,
+            "type": "grey",
+            "level": "purple"
+          }
+        ]
+      },
+      {
+        "name": "Abel",
+        "value": 10,
+        "type": "grey",
+        "level": "blue"
+      },
+      {
+        "name": "Awan",
+        "value": 10,
+        "type": "grey",
+        "level": "green",
+        "children": [
+          {
+            "name": "Enoch",
+            "value": 7.5,
+            "type": "grey",
+            "level": "orange"
+          }
+        ]
+      },
+      {
+        "name": "Azura",
+        "value": 10,
+        "type": "grey",
+        "level": "green"
+      }
+    ]
+  };
+  
+  // set the dimensions and margins of the diagram
+  const margin = {top: 20, right: 90, bottom: 30, left: 90},
+        width  = 600 - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom;
+  
+  // declares a tree layout and assigns the size
+  const treemap = d3.tree().size([height, width]);
+  
+  //  assigns the data to a hierarchy using parent-child relationships
+  let nodes = d3.hierarchy(treeData, d => d.children);
+  
+  // maps the node data to the tree layout
+  nodes = treemap(nodes);
+  
+  // append the svg object to the body of the page
+  // appends a 'group' element to 'svg'
+  // moves the 'group' element to the top left margin
+  const svg = d3.select("#graphPanel").append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom),
+        g = svg.append("g")
+          .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+  
+  // adds the links between the nodes
+  const link = g.selectAll(".link")
+    .data( nodes.descendants().slice(1))
+    .enter().append("path")
+    .attr("class", "link")
+    .style("stroke", "blue")
+    .attr("fill", "none")
+    .attr("d", d => {
+        return "M" + d.y + "," + d.x
+        + "C" + (d.y + d.parent.y) / 2 + "," + d.x
+        + " " + (d.y + d.parent.y) / 2 + "," + d.parent.x
+        + " " + d.parent.y + "," + d.parent.x;
+        });
+  
+  // adds each node as a group
+  const node = g.selectAll(".node")
+      .data(nodes.descendants())
+      .enter().append("g")
+      .attr("transform", d => "translate(" + d.y + "," + d.x + ")");
+  
+  // adds the circle to the node
+  node.append("circle")
+    .attr("r", d => d.data.value)
+    .style("stroke", "black")
+    .style("fill", "white");
+    
+  // adds the text to the node
+  node.append("text")
+    .attr("dy", ".35em")
+    .attr("x", d => d.children ? (d.data.value + 5) * -1 : d.data.value + 5)
+    .attr("y", d => d.children && d.depth !== 0 ? -(d.data.value + 5) : d.data.value)
+    .style("text-anchor", d => d.children ? "end" : "start")
+    .text(d => d.data.name);
 }
