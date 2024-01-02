@@ -31,7 +31,7 @@ func Graph(c *gin.Context) {
 		return
 	}
 
-	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
+	jsonRepresentation, _ := json.Marshal(g)
 
 	c.JSON(http.StatusOK, gin.H{
 		"graph":   json.RawMessage(jsonRepresentation),

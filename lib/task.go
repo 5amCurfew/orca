@@ -16,10 +16,11 @@ const (
 
 // Task represents a task in the DAG.
 type Task struct {
-	Name    string
-	Desc    string
-	Command string
-	Status  TaskStatus
+	Name     string        `json:"name,omitempty"`
+	Desc     string        `json:"desc,omitempty"`
+	Command  string        `json:"cmd,omitempty"`
+	Children []interface{} `json:"children,omitempty"`
+	Status   TaskStatus    `json:"status,omitempty"`
 }
 
 // ExecuteTask simulates the execution of a task

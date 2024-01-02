@@ -31,7 +31,7 @@ func Execute(c *gin.Context) {
 		return
 	}
 
-	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
+	jsonRepresentation, _ := json.Marshal(g)
 	g.ExecuteDAG()
 
 	c.JSON(http.StatusOK, gin.H{

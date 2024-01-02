@@ -48,7 +48,7 @@ function updateGraphPanel() {
     .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
     .then(data => {
         d3.select("#graphPanel").selectAll("*").remove()
-        createTreeDiagram(data.graph);
+        createTreeDiagram(data.graph.tasks);
     })
     .catch(error => {
         console.error('Error fetching data:', error);
@@ -75,67 +75,37 @@ function updateStatusPanel() {
 }
 
 function createTreeDiagram(data) {
-const treeData = {
-    "name": "Eve",
-    "value": 15,
-    "type": "black",
-    "level": "yellow",
-    "children": [
-      {
-        "name": "Cain",
-        "value": 10,
-        "type": "grey",
-        "level": "red"
-      },
-      {
-        "name": "Seth",
-        "value": 10,
-        "type": "grey",
-        "level": "red",
-        "children": [
-          {
-            "name": "Enos",
-            "value": 7.5,
-            "type": "grey",
-            "level": "purple"
-          },
-          {
-            "name": "Noam",
-            "value": 7.5,
-            "type": "grey",
-            "level": "purple"
-          }
-        ]
-      },
-      {
-        "name": "Abel",
-        "value": 10,
-        "type": "grey",
-        "level": "blue"
-      },
-      {
-        "name": "Awan",
-        "value": 10,
-        "type": "grey",
-        "level": "green",
-        "children": [
-          {
-            "name": "Enoch",
-            "value": 7.5,
-            "type": "grey",
-            "level": "orange"
-          }
-        ]
-      },
-      {
-        "name": "Azura",
-        "value": 10,
-        "type": "grey",
-        "level": "green"
-      }
-    ]
-  };
-  
+
+  const result = [];
+
+  for (const taskName in data) {
+    const task = data[taskName];
+    const modifiedTask = {
+      name: task.name,
+      desc: task.desc,
+      cmd: task.cmd,
+      status: task.status,
+    };
+
+    if (task.children) {
+      modifiedTask.children = task.children.map((child) => ({
+        name: child.name,
+        desc: child.desc,
+        cmd: child.cmd,
+        status: child.status,
+      }));
+    }
+
+    result.push(modifiedTask);
+  }
+
+  var treeData = {
+    "name": "root",
+    "children": result
+  }
+
+  // console.log(treeData)
+
   // set the dimensions and margins of the diagram
   const margin = {top: 20, right: 90, bottom: 30, left: 90},
         width  = 600 - margin.left - margin.right,
@@ -146,7 +116,8 @@ const treeData = {
   
   //  assigns the data to a hierarchy using parent-child relationships
   let nodes = d3.hierarchy(treeData, d => d.children);
-  
+  console.log(nodes)
+
   // maps the node data to the tree layout
   nodes = treemap(nodes);
   
@@ -182,15 +153,15 @@ const treeData = {
   
   // adds the circle to the node
   node.append("circle")
-    .attr("r", d => d.data.value)
+    .attr("r", d => 10)
     .style("stroke", "black")
     .style("fill", "white");
     
   // adds the text to the node
   node.append("text")
     .attr("dy", ".35em")
-    .attr("x", d => d.children ? (d.data.value + 5) * -1 : d.data.value + 5)
-    .attr("y", d => d.children && d.depth !== 0 ? -(d.data.value + 5) : d.data.value)
+    .attr("x", d => d.children ? (10 + 5) * -1 : 10 + 5)
+    .attr("y", d => d.children && d.depth !== 0 ? -(10 + 5) : 10)
     .style("text-anchor", d => d.children ? "end" : "start")
     .text(d => d.data.name);
-}
+};

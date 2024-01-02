@@ -18,10 +18,9 @@ func addEdge(dm depencyMap, from, to string) {
 }
 
 type Graph struct {
-	Tasks    map[string]*Task    `json:"tasks"`
-	Nodes    map[string]struct{} `json:"nodes"`
-	Parents  depencyMap          `json:"parents"`
-	Children depencyMap          `json:"children"`
+	Tasks    map[string]*Task `json:"tasks"`
+	Parents  depencyMap       `json:"parents"`
+	Children depencyMap       `json:"children"`
 }
 
 func NewGraph(filePath string) (*Graph, error) {
@@ -33,13 +32,8 @@ func NewGraph(filePath string) (*Graph, error) {
 
 	g := &Graph{
 		Tasks:    tasks,
-		Nodes:    make(map[string]struct{}),
 		Parents:  make(depencyMap),
 		Children: make(depencyMap),
-	}
-
-	for task := range g.Tasks {
-		g.Nodes[task] = struct{}{}
 	}
 
 	err = g.parseDependencies(filePath)
@@ -67,13 +61,10 @@ func (g *Graph) DependOn(child, parent string) error {
 		return errors.New("circular dependencies not allowed")
 	}
 
-	// Add Nodes
-	g.Nodes[parent] = struct{}{}
-	g.Nodes[child] = struct{}{}
-
 	// Add Edges
 	addEdge(g.Parents, child, parent)
 	addEdge(g.Children, parent, child)
+	g.Tasks[parent].Children = append(g.Tasks[parent].Children, g.Tasks[child])
 
 	return nil
 }
@@ -90,7 +81,7 @@ func (g *Graph) dependencies(root string) map[string]struct{} {
 }
 
 func (g *Graph) findDependencies(node string, out map[string]struct{}) {
-	if _, ok := g.Nodes[node]; !ok {
+	if _, ok := g.Tasks[node]; !ok {
 		return
 	}
 
