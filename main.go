@@ -8,11 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// curl http://localhost:8080/ping
-
-// curl -X POST http://localhost:8080/execute -H 'Content-Type: application/json' -d '{"file_path": "dags/test.orca"}'
-
 func main() {
+
+	err := os.MkdirAll("logs", os.ModePerm)
+	if err != nil {
+		fmt.Println("Error creating logs directory file:", err)
+	}
+
 	router := gin.Default()
 
 	router.Static("/ui", "./ui")
@@ -20,8 +22,7 @@ func main() {
 
 	router.GET("/ping", routes.Ping)
 	router.GET("/ui", routes.UI)
-
-	router.GET("/dags", routes.Dags)
+	router.GET("/pulse", routes.Pulse)
 	router.POST("/graph", routes.Graph)
 	router.POST("/status", routes.Status)
 	router.POST("/execute", routes.Execute)

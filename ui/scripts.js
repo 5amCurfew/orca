@@ -16,15 +16,13 @@ function Execute() {
     });
 };
 
-function updateSidebar() {
+function pulse() {
     // Fetch the list of files in the "dags" directory
-    // Replace this with your server-side logic to fetch the file list
-    fetch('/dags')
+    fetch('/pulse')
         .then(response => response.json())
         .then(data => {
             const dagButtonsContainer = document.getElementById('dagButtons');
             dagButtonsContainer.innerHTML = '';
-
             // Create a button for each file
             data.forEach(fileName => {
                 const button = document.createElement('button');
@@ -45,8 +43,9 @@ function updateGraphPanel() {
         method: "POST",
         body: JSON.stringify({ file_path: 'dags/'+currentHash }),
     })
-    .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
+    .then(response => response.json())
     .then(data => {
+        console.log(data);
         d3.select("#graphPanel").selectAll("*").remove()
         createTreeDiagram(data.graph.tasks);
     })
@@ -64,9 +63,9 @@ function updateStatusPanel() {
         method: "POST",
         body: JSON.stringify({ file_path: 'dags/'+currentHash }),
     })
-    .then(response => response.json()) // Adjust based on your response format (JSON, HTML, etc.)
+    .then(response => response.json())
     .then(data => {
-        console.log('updateStatusPanel')
+        //console.log('updateStatusPanel')
     })
     .catch(error => {
         console.error('Error fetching data:', error);
@@ -104,8 +103,6 @@ function createTreeDiagram(data) {
     "children": result
   }
 
-  // console.log(treeData)
-
   // set the dimensions and margins of the diagram
   const margin = {top: 20, right: 90, bottom: 30, left: 90},
         width  = 600 - margin.left - margin.right,
@@ -116,8 +113,6 @@ function createTreeDiagram(data) {
   
   //  assigns the data to a hierarchy using parent-child relationships
   let nodes = d3.hierarchy(treeData, d => d.children);
-  console.log(nodes)
-
   // maps the node data to the tree layout
   nodes = treemap(nodes);
   

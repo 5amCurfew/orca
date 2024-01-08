@@ -1,9 +1,11 @@
 package routes
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/5amCurfew/orca/lib"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,11 +28,15 @@ func getDagFiles(directory string) ([]string, error) {
 	return fileNames, nil
 }
 
-func Dags(c *gin.Context) {
+func Pulse(c *gin.Context) {
 	dagFiles, err := getDagFiles("dags")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	for _, dagName := range dagFiles {
+		lib.NewGraph(fmt.Sprintf("dags/%s", dagName))
 	}
 
 	c.JSON(http.StatusOK, dagFiles)

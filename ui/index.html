@@ -35,7 +35,7 @@
     
         </div>
     
-    </div>    
+    </div>
 
     <script>
         // Attach the updateGraphPanel function to the hashchange event
@@ -43,10 +43,10 @@
         window.addEventListener('hashchange', updateStatusPanel);
         document.getElementById('executeButton').addEventListener('click', Execute)
 
-        // Initial update
-        updateSidebar();
-        // Update the sidebar every 10 seconds
-        setInterval(updateSidebar, 10000);
+        // Initial Pulse
+        pulse();
+        // Pulse every 10 seconds
+        setInterval(pulse, 10000);
     </script>
 </body>
 </html>

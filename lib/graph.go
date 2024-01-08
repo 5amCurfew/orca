@@ -3,6 +3,8 @@ package lib
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 )
 
@@ -18,19 +20,20 @@ func addEdge(dm depencyMap, from, to string) {
 }
 
 type Graph struct {
+	Name     string           `json:"name"`
 	Tasks    map[string]*Task `json:"tasks"`
 	Parents  depencyMap       `json:"parents"`
 	Children depencyMap       `json:"children"`
 }
 
 func NewGraph(filePath string) (*Graph, error) {
-
 	tasks, err := parseTasks(filePath)
 	if err != nil {
 		return &Graph{}, errors.New(err.Error())
 	}
 
 	g := &Graph{
+		Name:     filePath[5:strings.Index(filePath, ".orca")],
 		Tasks:    tasks,
 		Parents:  make(depencyMap),
 		Children: make(depencyMap),
@@ -39,6 +42,12 @@ func NewGraph(filePath string) (*Graph, error) {
 	err = g.parseDependencies(filePath)
 	if err != nil {
 		return &Graph{}, errors.New(err.Error())
+	}
+
+	dirPath := fmt.Sprintf("logs/%s", g.Name)
+	err2 := os.MkdirAll(dirPath, os.ModePerm)
+	if err2 != nil {
+		fmt.Printf("Error creating logs directory: %s\n", err2)
 	}
 
 	return g, nil
@@ -93,9 +102,9 @@ func (g *Graph) findDependencies(node string, out map[string]struct{}) {
 	}
 }
 
-// ExecuteDAG orchestrates and executes the tasks given the DAG.
+// ExecuteDAG orchestrates and executes the tasks in the DAG
 func (g *Graph) ExecuteDAG() {
-	// Create Channel Map for task completion
+	// Create a Map of Channels for task completion
 	completionChannels := make(map[string]chan bool)
 
 	// Initialise channel for each task
@@ -106,21 +115,21 @@ func (g *Graph) ExecuteDAG() {
 	// Use a WaitGroup to wait for all tasks to complete
 	var waitGroup sync.WaitGroup
 
-	// Create goroutines for each task
+	// Create & Start goroutines for each task
 	for taskName := range g.Tasks {
-		// Increment the wait group for each task
-		g.Tasks[taskName].Status = Pending
+		// Increment the wait group
 		waitGroup.Add(1)
-		// Start goroutines for each task that are blocked until all parents have sent successful completion message
+		g.Tasks[taskName].Status = Pending
+
+		// Start goroutines that is blocked until all parents have sent successful completion message
 		go func(taskName string, completionChMap map[string]chan bool) {
 			// Wait for all parents to complete
 			for parent := range g.Parents[taskName] {
 				<-completionChMap[parent]
 			}
 
-			// Execute the task
-			fmt.Println("executing ", taskName)
-			executeTask(g.Tasks[taskName], completionChMap)
+			// Execute
+			executeTask(g.Tasks[taskName], g.Name, completionChMap)
 
 			close(completionChMap[taskName])
 			waitGroup.Done()
