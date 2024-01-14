@@ -55,9 +55,9 @@ function updateGraphPanel() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data);
-        d3.select("#graphPanel").selectAll("*").remove()
-        createTreeDiagram(data.graph.tasks);
+        //console.log(data);
+        d3.select("#graphPanelSVG").select("g").selectAll(".output").remove()
+        createTreeDiagram(data.graph);
     })
     .catch(error => {
         console.error('Error fetching data:', error);
@@ -74,7 +74,7 @@ function updateStatusPanel() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data);
+        //console.log(data);
     })
     .catch(error => {
         console.error('Error fetching data:', error);
@@ -86,91 +86,68 @@ function updateStatusPanel() {
 // ////////////////////////////////////
 // Create Tree Diagram
 // ////////////////////////////////////
-function createTreeDiagram(data) {
+function transformRepresentation(graph) {
+    const nodes = [];
+    const edges = [];
+  
+    // Extract nodes
+    Object.keys(graph.tasks).forEach(taskKey => {
+      const task = graph.tasks[taskKey];
+      nodes.push({ id: task.name, desc: task.desc });
+    });
+  
+    // Extract edges
+    Object.keys(graph.children).forEach(parentKey => {
+      const parent = graph.children[parentKey];
+      Object.keys(parent).forEach(childKey => {
+        edges.push({ source: parentKey, target: childKey });
+      });
+    });
+    
+    return [nodes, edges];
+};
 
-    const result = [];
+function createTreeDiagram(data) {
+    var g = new dagreD3.graphlib.Graph().setGraph({
+        nodesep: 50,
+        ranksep: 50,
+        rankdir: "LR",
+        marginx: 40,
+        marginy: 40
+      });
+
+    // Data for this example
+    var [nodes, edges] = transformRepresentation(data)
+
+    // Add nodes
+    nodes.forEach(node => {  
+        g.setNode(node.id, {
+            labelType: "html",
+            label: `<div class='nodeName'>${node.id}</div>`,
+            width: node.id.length * 10,
+            rx: 5,
+            ry: 5
+        }); 
+    });  
+
+    // Add edges
+    edges.forEach(edge => {
+        g.setEdge(edge.source, edge.target, {
+            arrowhead: "normal",
+            arrowheadStyle: "fill: #383838",
+            lineInterpolate: 'basis'
+        });
+    });
+
+    var render = new dagreD3.render();
+
+    var svg = d3.select("#graphPanelSVG"),
+    inner = svg.select("g"),
+    zoom = d3.zoom().on("zoom", function() {
+      inner.attr("transform", d3.zoomTransform(this));
+    });
+    svg.call(zoom);
   
-    for (const taskName in data) {
-      const task = data[taskName];
-      const modifiedTask = {
-        name: task.name,
-        desc: task.desc,
-        cmd: task.cmd,
-        status: task.status,
-      };
-  
-      if (task.children) {
-        modifiedTask.children = task.children.map((child) => ({
-          name: child.name,
-          desc: child.desc,
-          cmd: child.cmd,
-          status: child.status,
-        }));
-      }
-  
-      result.push(modifiedTask);
-    }
-  
-    var treeData = {
-      "name": "root",
-      "children": result
-    }
-  
-    // set the dimensions and margins of the diagram
-    const margin = {top: 20, right: 90, bottom: 30, left: 90},
-          width  = 600 - margin.left - margin.right,
-          height = 600 - margin.top - margin.bottom;
-    
-    // declares a tree layout and assigns the size
-    const treemap = d3.tree().size([height, width]);
-    
-    //  assigns the data to a hierarchy using parent-child relationships
-    let nodes = d3.hierarchy(treeData, d => d.children);
-    // maps the node data to the tree layout
-    nodes = treemap(nodes);
-    
-    // append the svg object to the body of the page
-    // appends a 'group' element to 'svg'
-    // moves the 'group' element to the top left margin
-    const svg = d3.select("#graphPanel").append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom),
-          g = svg.append("g")
-            .attr("transform",
-                "translate(" + margin.left + "," + margin.top + ")");
-    
-    // adds the links between the nodes
-    const link = g.selectAll(".link")
-      .data( nodes.descendants().slice(1))
-      .enter().append("path")
-      .attr("class", "link")
-      .style("stroke", "blue")
-      .attr("fill", "none")
-      .attr("d", d => {
-          return "M" + d.y + "," + d.x
-          + "C" + (d.y + d.parent.y) / 2 + "," + d.x
-          + " " + (d.y + d.parent.y) / 2 + "," + d.parent.x
-          + " " + d.parent.y + "," + d.parent.x;
-          });
-    
-    // adds each node as a group
-    const node = g.selectAll(".node")
-        .data(nodes.descendants())
-        .enter().append("g")
-        .attr("transform", d => "translate(" + d.y + "," + d.x + ")");
-    
-    // adds the circle to the node
-    node.append("circle")
-      .attr("r", d => 10)
-      .style("stroke", "black")
-      .style("fill", "white");
-      
-    // adds the text to the node
-    node.append("text")
-      .attr("dy", ".35em")
-      .attr("x", d => d.children ? (10 + 5) * -1 : 10 + 5)
-      .attr("y", d => d.children && d.depth !== 0 ? -(10 + 5) : 10)
-      .style("text-anchor", d => d.children ? "end" : "start")
-      .text(d => d.data.name);
+    inner.call(render, g);
   };
   

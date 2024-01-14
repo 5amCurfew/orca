@@ -109,7 +109,6 @@ func (g *Graph) dependOn(child, parent string) error {
 	// Add Edges
 	util.AddEdge(g.Parents, child, parent)
 	util.AddEdge(g.Children, parent, child)
-	g.Tasks[parent].Children = append(g.Tasks[parent].Children, g.Tasks[child])
 
 	return nil
 }

@@ -1,18 +1,13 @@
-html, body {
+html {
     height: 100%;
-    margin: 0;
     font-family: FreeMono, monospace;
 }
 
 body {
     display: flex;
     height: 100%;
-    border: 1px dashed black;
-}
-
-.placeholder {
-    color: #888;
-    font-size: 100%;
+    margin: 0; /* Resetting the default margin */
+    border: 1px dashed #000000;
 }
 
 #sidebar {
@@ -30,11 +25,24 @@ body {
     padding: 2%;
 }
 
-#graphPanel,
-#statusPanel {
-    flex: 1; /* Distribute remaining space equally */
+#panelContainer{
     display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#graphPanel{
+    height: 40%;
     border: 1px solid black;
+}
+#statusPanel {
+    height: 60%;
+    border: 1px solid black;
+}
+
+#graphPanelSVG{
+    width: 100%;
+    height: 100%;
 }
 
 button {
@@ -53,4 +61,18 @@ button {
 
 button:hover {
     background-color: #bbb;
+}
+
+.node{
+    fill: transparent;
+    stroke: blue;
+}
+
+.edgePath{
+    fill: black;
+    stroke: black;
+}
+
+.g {
+    width: 100%;
 }

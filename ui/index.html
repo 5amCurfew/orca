@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://dagrejs.github.io/project/dagre-d3/latest/dagre-d3.min.js"></script>
     <title>{{.title}}</title>
     <link rel="stylesheet" href="ui/style.css">
     <script type="text/javascript" src="ui/index.js"></script>
@@ -21,17 +22,15 @@
         </button>
     
         <!-- Panels Container -->
-        <div>
+        <div id="panelContainer">
     
-            <!-- Left Panel: Graph Diagram of the DAG -->
+            <!-- Top Panel: Graph Diagram of the DAG -->
             <div id="graphPanel">
-                {{.graphHTML}}
+                <svg id="graphPanelSVG"><g/></svg>
             </div>
     
-            <!-- Right Panel: Status of the Last 10 Runs -->
-            <div id="statusPanel">
-                {{.statusHTML}}
-            </div>
+            <!-- Bottom Panel: Status of the Last 10 Runs -->
+            <div id="statusPanel"></div>
     
         </div>
     
