@@ -6,7 +6,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <title>{{.title}}</title>
     <link rel="stylesheet" href="ui/style.css">
-    <script type="text/javascript" src="ui/scripts.js"></script>
+    <script type="text/javascript" src="ui/index.js"></script>
 </head>
 <body>
     <div id="sidebar">
@@ -41,7 +41,7 @@
         // Attach the updateGraphPanel function to the hashchange event
         window.addEventListener('hashchange', updateGraphPanel);
         window.addEventListener('hashchange', updateStatusPanel);
-        document.getElementById('executeButton').addEventListener('click', Execute)
+        document.getElementById('executeButton').addEventListener('click', execute)
 
         // Initial Pulse
         pulse();

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/5amCurfew/orca/lib"
 	"github.com/5amCurfew/orca/routes"
 	"github.com/gin-gonic/gin"
 )
@@ -26,6 +27,8 @@ func main() {
 	router.POST("/graph", routes.Graph)
 	router.POST("/status", routes.Status)
 	router.POST("/execute", routes.Execute)
+
+	go lib.Schedule()
 
 	if err := router.Run(":8080"); err != nil {
 		fmt.Fprintf(os.Stderr, "error starting Gin server: %s", err)

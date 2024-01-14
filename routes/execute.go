@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/5amCurfew/orca/lib"
 	"github.com/gin-gonic/gin"
@@ -31,11 +31,9 @@ func Execute(c *gin.Context) {
 		return
 	}
 
-	jsonRepresentation, _ := json.Marshal(g)
-	g.ExecuteDAG()
+	g.Execute(time.Now())
 
 	c.JSON(http.StatusOK, gin.H{
-		"graph":   json.RawMessage(jsonRepresentation),
 		"message": fmt.Sprintf("DAG %s execution completed", filePath),
 	})
 }

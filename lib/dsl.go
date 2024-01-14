@@ -86,7 +86,7 @@ func parseDependencies(filePath string, g *Graph) error {
 				}
 
 				for _, dependency := range dependencyList {
-					err := g.DependOn(dependentTask, dependency)
+					err := g.dependOn(dependentTask, dependency)
 					if err != nil {
 						fmt.Println(err.Error())
 						return err
@@ -94,7 +94,7 @@ func parseDependencies(filePath string, g *Graph) error {
 				}
 			} else {
 				// Case where there is a single dependency
-				err := g.DependOn(dependentTask, dependencies)
+				err := g.dependOn(dependentTask, dependencies)
 				if err != nil {
 					return err
 				}

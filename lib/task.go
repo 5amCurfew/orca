@@ -26,17 +26,21 @@ type Task struct {
 }
 
 // ExecuteTask executes a Task's command
-func executeTask(task *Task, graphName string, completionChMap map[string]chan bool) {
-	cmdParts := []string{"bash", "-c", task.Command}
+func (t *Task) execute(graphName string, dagExecutionStartTime time.Time, completionChMap map[string]chan bool) {
+	cmdParts := []string{"bash", "-c", t.Command}
 	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
-	task.Status = Running
+	t.Status = Running
 
-	// Create log
-	logFile, err := os.Create(fmt.Sprintf("logs/%s/%s_%s.log", graphName, task.Name, time.Now().Format("2006_01_02_15_04_05")))
+	// Create log directory if it doesn't exist
+	logDir := fmt.Sprintf("logs/%s/%s", graphName, dagExecutionStartTime.Format("2006-01-02_15-04-05"))
+	os.MkdirAll(logDir, os.ModePerm)
+
+	// Create log file
+	logFile, err := os.Create(fmt.Sprintf("%s/%s.log", logDir, t.Name))
 	if err != nil {
-		fmt.Println("Error creating output file:", err)
-		completionChMap[task.Name] <- false
-		task.Status = Failed
+		fmt.Println("Error creating log output file:", err)
+		completionChMap[t.Name] <- false
+		t.Status = Failed
 		return
 	}
 
@@ -44,10 +48,10 @@ func executeTask(task *Task, graphName string, completionChMap map[string]chan b
 	cmd.Stderr = logFile
 
 	if err := cmd.Run(); err != nil {
-		completionChMap[task.Name] <- false
-		task.Status = Failed
+		completionChMap[t.Name] <- false
+		t.Status = Failed
 	} else {
-		completionChMap[task.Name] <- true
-		task.Status = Success
+		completionChMap[t.Name] <- true
+		t.Status = Success
 	}
 }

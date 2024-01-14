@@ -1,11 +1,9 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/5amCurfew/orca/lib"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,16 +23,7 @@ func Status(c *gin.Context) {
 		return
 	}
 
-	g, err := lib.NewGraph(filePath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse DAG: %s", err)})
-		return
-	}
-
-	jsonRepresentation, _ := json.MarshalIndent(g, "", "  ")
-
 	c.JSON(http.StatusOK, gin.H{
-		"graph":   json.RawMessage(jsonRepresentation),
-		"message": fmt.Sprintf("DAG %s graph created", filePath),
+		"message": fmt.Sprintf("status route called for %s", filePath),
 	})
 }
