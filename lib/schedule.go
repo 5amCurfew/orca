@@ -9,11 +9,11 @@ import (
 	"github.com/robfig/cron"
 )
 
+// Initialize the job scheduler
+var dagScheduler = cron.New()
+
 func Schedule() {
 	log.Printf("Schedule initiating at %s\n", time.Now().Format("2006-01-02 15:04:05"))
-
-	// Initialize the job scheduler
-	c := cron.New()
 
 	dagFiles, _ := util.GetDagFiles()
 
@@ -23,15 +23,24 @@ func Schedule() {
 			g, _ := NewGraph(fmt.Sprintf("dags/%s", dagFile))
 
 			// Add scheduled job for every 5 minutes
-			c.AddFunc("0 */2 * * *", func() {
+			dagScheduler.AddFunc("0 */2 * * *", func() {
 				go g.Execute(time.Now())
 			})
+			fmt.Printf("Schedule initiated job for %s\n", dagFile)
 		}(dagFile)
 	}
 
 	// Start the job scheduler
-	c.Start()
-	log.Printf("Schedule initiated at %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	dagScheduler.Start()
+
+	log.Printf("Schedule(s) initiated at %s\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	select {}
+}
+
+func UpdateSchedule() {
+	log.Println("Schedules(s) updating at", time.Now().Format("2006-01-02 15:04:05"))
+	dagScheduler.Stop()
+	dagScheduler = cron.New()
+	Schedule()
 }

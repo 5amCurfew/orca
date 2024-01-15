@@ -1,9 +1,9 @@
 // ////////////////////////////////////
 // Pulse
 // ////////////////////////////////////
-function pulse() {
+function refresh() {
     // Fetch the list of files in the "dags" directory
-    fetch('/pulse')
+    fetch('/refresh')
         .then(response => response.json())
         .then(data => {
             const dagButtonsContainer = document.getElementById('dagButtons');
@@ -112,8 +112,8 @@ function createTreeDiagram(data) {
         nodesep: 50,
         ranksep: 50,
         rankdir: "LR",
-        marginx: 40,
-        marginy: 40
+        marginx: 10,
+        marginy: 10
       });
 
     // Data for this example
@@ -135,7 +135,8 @@ function createTreeDiagram(data) {
         g.setEdge(edge.source, edge.target, {
             arrowhead: "normal",
             arrowheadStyle: "fill: #383838",
-            lineInterpolate: 'basis'
+            lineInterpolate: 'basis',
+            curve: d3.curveBasis
         });
     });
 

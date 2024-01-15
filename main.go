@@ -23,7 +23,7 @@ func main() {
 
 	router.GET("/ping", routes.Ping)
 	router.GET("/ui", routes.UI)
-	router.GET("/pulse", routes.Pulse)
+	router.GET("/refresh", routes.Refresh)
 	router.POST("/graph", routes.Graph)
 	router.POST("/status", routes.Status)
 	router.POST("/execute", routes.Execute)

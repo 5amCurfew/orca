@@ -11,6 +11,9 @@
 </head>
 <body>
     <div id="sidebar">
+        <button id="refreshButton">
+            ⟳ Refresh DAG(s)
+        </button>
         <div id="dagButtons"></div>
     </div>
 
@@ -41,11 +44,10 @@
         window.addEventListener('hashchange', updateGraphPanel);
         window.addEventListener('hashchange', updateStatusPanel);
         document.getElementById('executeButton').addEventListener('click', execute)
+        document.getElementById('refreshButton').addEventListener('click', refresh)
 
-        // Initial Pulse
-        pulse();
-        // Pulse every 10 seconds
-        setInterval(pulse, 10000);
+        // Initial Refresh
+        refresh();
     </script>
 </body>
 </html>
