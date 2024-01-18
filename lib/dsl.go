@@ -3,6 +3,7 @@ package lib
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -55,6 +56,26 @@ func parseTasks(filePath string) (map[string]*Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func parseSchedule(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "schedule") {
+			log.Printf("Schedule found for DAG %s\n", filePath)
+			fields := strings.Split(line, "=")
+			return strings.TrimSpace(fields[1]), nil
+		}
+	}
+	log.Printf("No schedule provided for DAG %s\n", filePath)
+	return "", nil
 }
 
 func parseDependencies(filePath string, g *Graph) error {

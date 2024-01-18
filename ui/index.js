@@ -55,7 +55,7 @@ function updateGraphPanel() {
     })
     .then(response => response.json())
     .then(data => {
-        //console.log(data);
+        // console.log(data);
         d3.select("#graphPanelSVG").select("g").selectAll(".output").remove()
         createTreeDiagram(data.graph);
     })

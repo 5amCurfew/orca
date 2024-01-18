@@ -17,10 +17,16 @@ type Graph struct {
 	Tasks    map[string]*Task `json:"tasks"`
 	Parents  util.DepencyMap  `json:"parents"`
 	Children util.DepencyMap  `json:"children"`
+	Schedule string           `json:"schedule"`
 }
 
 func NewGraph(filePath string) (*Graph, error) {
 	tasks, err := parseTasks(filePath)
+	if err != nil {
+		return &Graph{}, errors.New(err.Error())
+	}
+
+	schedule, err := parseSchedule(filePath)
 	if err != nil {
 		return &Graph{}, errors.New(err.Error())
 	}
@@ -30,6 +36,7 @@ func NewGraph(filePath string) (*Graph, error) {
 		Tasks:    tasks,
 		Parents:  make(util.DepencyMap),
 		Children: make(util.DepencyMap),
+		Schedule: schedule,
 	}
 
 	err = g.parseDependencies(filePath)
@@ -38,9 +45,9 @@ func NewGraph(filePath string) (*Graph, error) {
 	}
 
 	dirPath := fmt.Sprintf("logs/%s", g.Name)
-	err2 := os.MkdirAll(dirPath, os.ModePerm)
-	if err2 != nil {
-		fmt.Printf("Error creating logs directory: %s\n", err2)
+	err = os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		log.Printf("Error creating logs directory: %s\n", err)
 	}
 
 	return g, nil

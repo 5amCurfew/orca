@@ -22,24 +22,24 @@ func Schedule() {
 		func(dagFile string) {
 			g, _ := NewGraph(fmt.Sprintf("dags/%s", dagFile))
 
-			// Add scheduled job for every 5 minutes
-			dagScheduler.AddFunc("0 */2 * * *", func() {
-				go g.Execute(time.Now())
-			})
-			fmt.Printf("Schedule initiated job for %s\n", dagFile)
+			// Schedule
+			if g.Schedule != "" {
+				dagScheduler.AddFunc(g.Schedule, func() {
+					go g.Execute(time.Now())
+				})
+				log.Printf("Schedule initiated job for %s (%s)\n", dagFile, g.Schedule)
+			}
 		}(dagFile)
 	}
 
 	// Start the job scheduler
 	dagScheduler.Start()
-
 	log.Printf("Schedule(s) initiated at %s\n", time.Now().Format("2006-01-02 15:04:05"))
-
 	select {}
 }
 
 func UpdateSchedule() {
-	log.Println("Schedules(s) updating at", time.Now().Format("2006-01-02 15:04:05"))
+	log.Printf("Schedules(s) updating at %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	dagScheduler.Stop()
 	dagScheduler = cron.New()
 	Schedule()

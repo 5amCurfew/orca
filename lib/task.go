@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -37,7 +38,7 @@ func (t *Task) execute(graphName string, dagExecutionStartTime time.Time, comple
 	// Create log file
 	logFile, err := os.Create(fmt.Sprintf("%s/%s.log", logDir, t.Name))
 	if err != nil {
-		fmt.Println("Error creating log output file:", err)
+		log.Printf("Error creating log output file: %s", err)
 		completionChMap[t.Name] <- false
 		t.Status = Failed
 		return
