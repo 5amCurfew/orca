@@ -25,7 +25,7 @@ func main() {
 	router.GET("/ui", routes.UI)
 	router.GET("/refresh", routes.Refresh)
 	router.POST("/graph", routes.Graph)
-	router.POST("/status", routes.Status)
+	router.POST("/logs", routes.Logs)
 	router.POST("/execute", routes.Execute)
 
 	go lib.Schedule()

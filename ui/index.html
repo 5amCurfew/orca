@@ -33,8 +33,11 @@
                 <svg id="graphPanelSVG"><g/></svg>
             </div>
     
-            <!-- Bottom Panel: Status of the Last 10 Runs -->
-            <div id="statusPanel"></div>
+            <!-- Bottom Panel: Logs -->
+            <div id="logsPanel">
+                <div id="logButtons"></div>
+                <div id="logViewer"></div>
+            </div>
     
         </div>
     
@@ -43,7 +46,7 @@
     <script>
         // Attach the updateGraphPanel function to the hashchange event
         window.addEventListener('hashchange', updateGraphPanel);
-        window.addEventListener('hashchange', updateStatusPanel);
+        window.addEventListener('hashchange', updateLogsPanel);
         document.getElementById('executeButton').addEventListener('click', execute)
         document.getElementById('refreshButton').addEventListener('click', refresh)
 

@@ -65,16 +65,24 @@ function updateGraphPanel() {
     });
 }
 
-function updateStatusPanel() {
+function updateLogsPanel() {
     const currentHash = window.location.hash.substring(1);
 
-    fetch(`/status`, {
+    fetch(`/logs`, {
         method: "POST",
-        body: JSON.stringify({ file_path: 'dags/'+currentHash }),
+        body: JSON.stringify({ logs_path: 'logs/'+currentHash }),
     })
     .then(response => response.json())
     .then(data => {
-        //console.log(data);
+        const logButtonsContainer = document.getElementById('logButtons');
+        logButtonsContainer.innerHTML = '';
+        n = data.logList.length < 10? data.logList.length : 10;
+        // Create a button for each file
+        data.logList.slice(-n).reverse().forEach(dirName => {
+            const button = document.createElement('button');
+            button.textContent = dirName;
+            logButtonsContainer.appendChild(button);
+        });
     })
     .catch(error => {
         console.error('Error fetching data:', error);

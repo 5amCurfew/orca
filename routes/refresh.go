@@ -10,7 +10,7 @@ import (
 )
 
 func Refresh(c *gin.Context) {
-	dagFiles, err := util.GetDagFiles()
+	dagFiles, err := util.ListFiles("dags")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

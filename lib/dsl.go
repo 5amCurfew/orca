@@ -3,7 +3,6 @@ package lib
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -69,12 +68,10 @@ func parseSchedule(filePath string) (string, error) {
 		line := scanner.Text()
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "schedule") {
-			log.Printf("Schedule found for DAG %s\n", filePath)
 			fields := strings.Split(line, "=")
 			return strings.TrimSpace(fields[1]), nil
 		}
 	}
-	log.Printf("No schedule provided for DAG %s\n", filePath)
 	return "", nil
 }
 

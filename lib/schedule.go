@@ -15,7 +15,7 @@ var dagScheduler = cron.New()
 func Schedule() {
 	log.Printf("Schedule initiating at %s\n", time.Now().Format("2006-01-02 15:04:05"))
 
-	dagFiles, _ := util.GetDagFiles()
+	dagFiles, _ := util.ListFiles("dags")
 
 	for _, dagFile := range dagFiles {
 		// Capture g in a closure
@@ -24,6 +24,7 @@ func Schedule() {
 
 			// Schedule
 			if g.Schedule != "" {
+				log.Printf("Schedule found for DAG %s\n", g.Name)
 				dagScheduler.AddFunc(g.Schedule, func() {
 					go g.Execute(time.Now())
 				})

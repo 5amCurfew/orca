@@ -56,7 +56,7 @@ func NewGraph(filePath string) (*Graph, error) {
 // ExecuteDAG orchestrates and executes the tasks in the DAG
 func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 
-	log.Printf("Execution start at %s (%s)\n", time.Now().Format("2006-01-02 15:04:05"), g.Name)
+	log.Printf("%s execution start at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
 
 	// Create a Map of Channels for task completion
 	completionChannels := make(map[string]chan bool)
@@ -93,7 +93,7 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 
 	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
-	log.Printf("Execution complete at %s (%s)\n", time.Now().Format("2006-01-02 15:04:05"), g.Name)
+	log.Printf("%s execution complete at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
 }
 
 func (g *Graph) parseDependencies(filePath string) error {
