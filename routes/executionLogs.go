@@ -1,15 +1,13 @@
 package routes
 
 import (
-	"fmt"
 	"net/http"
-	"time"
 
-	"github.com/5amCurfew/orca/lib"
+	"github.com/5amCurfew/orca/util"
 	"github.com/gin-gonic/gin"
 )
 
-func Execute(c *gin.Context) {
+func ExecutionLogs(c *gin.Context) {
 	var requestData map[string]interface{}
 
 	// Parse JSON request body
@@ -19,22 +17,15 @@ func Execute(c *gin.Context) {
 	}
 
 	// Extract orca file path from the request
-	d, ok := requestData["path"].(string)
+	logsPath, ok := requestData["path"].(string)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "path required"})
 		return
 	}
-	filePath := fmt.Sprintf("%s.orca", d)
 
-	g, err := lib.NewGraph(filePath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse DAG: %s", err)})
-		return
-	}
-
-	g.Execute(time.Now())
-
+	logDirectories, _ := util.ListDirs(logsPath)
 	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("DAG %s execution completed", filePath),
+		"logList": logDirectories,
+		"message": logsPath,
 	})
 }

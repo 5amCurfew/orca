@@ -44,15 +44,15 @@ body {
     flex-direction: row;
     border: 1px dashed gray;
     overflow-y: scroll;
-
 }
 
-#logButtons {
+#logButtons, #logTaskButtons {
     flex: 0 0 20%;
     height: 100%;
     box-sizing: border-box;
     border: 1px dashed grey;
     overflow-y: scroll;
+    padding: 20px;
 }
 
 #logViewer {
@@ -85,6 +85,10 @@ button {
 
 button:hover {
     background-color: #8c8c8c;
+}
+
+.button-highlighted {
+    background-color: #ffcc00; /* Change this color to your desired highlighting color */
 }
 
 .node{

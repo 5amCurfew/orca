@@ -2,13 +2,12 @@ package routes
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/5amCurfew/orca/util"
 	"github.com/gin-gonic/gin"
 )
 
-func Logs(c *gin.Context) {
+func ExecutionTaskLogs(c *gin.Context) {
 	var requestData map[string]interface{}
 
 	// Parse JSON request body
@@ -18,11 +17,15 @@ func Logs(c *gin.Context) {
 	}
 
 	// Extract orca file path from the request
-	logsPath := strings.Split(requestData["logs_path"].(string), ".orca")[0]
+	logsPath, ok := requestData["path"].(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path required"})
+		return
+	}
 
-	logDirectories, _ := util.ListDirs(logsPath)
+	logTaskFiles, _ := util.ListFiles(logsPath)
 	c.JSON(http.StatusOK, gin.H{
-		"logList": logDirectories,
-		"message": logsPath,
+		"logTaskList": logTaskFiles,
+		"message":     logsPath,
 	})
 }

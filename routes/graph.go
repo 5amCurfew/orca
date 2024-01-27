@@ -19,13 +19,13 @@ func Graph(c *gin.Context) {
 	}
 
 	// Extract orca file path from the request
-	filePath, ok := requestData["file_path"].(string)
+	filePath, ok := requestData["path"].(string)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file_path required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path required"})
 		return
 	}
 
-	g, err := lib.NewGraph(filePath)
+	g, err := lib.NewGraph(fmt.Sprintf("%s.orca", filePath))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to parse DAG: %s", err)})
 		return

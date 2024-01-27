@@ -13,7 +13,7 @@ function refresh() {
                 const button = document.createElement('button');
                 button.textContent = fileName;
                 button.addEventListener('click', () => {
-                    window.location.hash = fileName;
+                    window.location.hash = fileName.split(".orca")[0];
                 });
                 dagButtonsContainer.appendChild(button);
             });
@@ -26,11 +26,12 @@ function refresh() {
 // ////////////////////////////////////
 function execute() {
     const currentHash = window.location.hash.substring(1);
+    const dag = currentHash.split("@")[0];
 
     // Send a POST request to the execute route
     fetch('/execute', {
         method: 'POST',
-        body: JSON.stringify({ file_path: 'dags/'+currentHash }),
+        body: JSON.stringify({ path: `dags/${dag}` }),
     })
     .then(response => response.json())
     .then(data => {
@@ -48,10 +49,11 @@ function execute() {
 // ////////////////////////////////////
 function updateGraphPanel() {
     const currentHash = window.location.hash.substring(1);
+    const dag = currentHash.split("@")[0];
 
     fetch(`/graph`, {
         method: "POST",
-        body: JSON.stringify({ file_path: 'dags/'+currentHash }),
+        body: JSON.stringify({ path: `dags/${dag}` }),
     })
     .then(response => response.json())
     .then(data => {
@@ -67,10 +69,11 @@ function updateGraphPanel() {
 
 function updateLogsPanel() {
     const currentHash = window.location.hash.substring(1);
+    const dag = currentHash.split("@")[0];
 
-    fetch(`/logs`, {
+    fetch(`/executionLogs`, {
         method: "POST",
-        body: JSON.stringify({ logs_path: 'logs/'+currentHash }),
+        body: JSON.stringify({ path: `logs/${dag}`}),
     })
     .then(response => response.json())
     .then(data => {
@@ -80,12 +83,47 @@ function updateLogsPanel() {
         // Create a button for each file
         data.logList.slice(-n).reverse().forEach(dirName => {
             const button = document.createElement('button');
+            
             button.textContent = dirName;
             logButtonsContainer.appendChild(button);
+            button.addEventListener('click', () => {
+                const d = window.location.hash.split("@")[0];
+                window.location.hash = `${d}@${dirName}`;
+            });
         });
     })
     .catch(error => {
         console.error('Error fetching data:', error);
+        // Handle errors as needed
+    });
+}
+
+function updateLogTasksPanel() {
+    const currentHash = window.location.hash.substring(1);
+    const dag = currentHash.split("@")[0];
+    const executionStart = currentHash.split("@")[1];
+
+    fetch(`/executionTaskLogs`, {
+        method: "POST",
+        body: JSON.stringify({ path: `logs/${dag}/${executionStart}` }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        const logButtonsContainer = document.getElementById('logTaskButtons');
+        logButtonsContainer.innerHTML = '';
+        // Create a button for each file
+        data.logTaskList.forEach(fileName => {
+            const button = document.createElement('button');
+            button.textContent = fileName;
+            button.addEventListener('click', () => {
+                const d = `${window.location.hash.split("@")[0]}@${window.location.hash.split("@")[1]}`;
+                window.location.hash = `${d}@${fileName}`;
+            });
+            logButtonsContainer.appendChild(button);
+        });
+    })
+    .catch(error => {
+        //console.error('Error fetching data:', error);
         // Handle errors as needed
     });
 }

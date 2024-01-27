@@ -36,6 +36,7 @@
             <!-- Bottom Panel: Logs -->
             <div id="logsPanel">
                 <div id="logButtons"></div>
+                <div id="logTaskButtons"></div>
                 <div id="logViewer"></div>
             </div>
     
@@ -44,9 +45,22 @@
     </div>
 
     <script>
+        function highlightButton(button) {
+            // Remove highlighting from all buttons
+            var allButtons = document.querySelectorAll('.highlightable');
+            allButtons.forEach(function (btn) {
+                btn.classList.remove('button-highlighted');
+            });
+
+            // Add highlighting to the clicked button
+            button.classList.add('button-highlighted');
+        };
+
         // Attach the updateGraphPanel function to the hashchange event
         window.addEventListener('hashchange', updateGraphPanel);
         window.addEventListener('hashchange', updateLogsPanel);
+        window.addEventListener('hashchange', updateLogTasksPanel);
+        
         document.getElementById('executeButton').addEventListener('click', execute)
         document.getElementById('refreshButton').addEventListener('click', refresh)
 
