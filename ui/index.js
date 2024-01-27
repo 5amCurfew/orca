@@ -2,11 +2,11 @@
 // Pulse
 // ////////////////////////////////////
 function refresh() {
-    // Fetch the list of files in the "dags" directory
+    const dagButtonsContainer = document.getElementById('dagButtons');
+
     fetch('/refresh')
         .then(response => response.json())
         .then(data => {
-            const dagButtonsContainer = document.getElementById('dagButtons');
             dagButtonsContainer.innerHTML = '';
             // Create a button for each file
             data.dagList.forEach(fileName => {
@@ -50,52 +50,59 @@ function execute() {
 function updateGraphPanel() {
     const currentHash = window.location.hash.substring(1);
     const dag = currentHash.split("@")[0];
+    const executionStart = currentHash.split("@")[1];
 
-    fetch(`/graph`, {
-        method: "POST",
-        body: JSON.stringify({ path: `dags/${dag}` }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        // console.log(data);
-        d3.select("#graphPanelSVG").select("g").selectAll(".output").remove()
-        createTreeDiagram(data.graph);
-    })
-    .catch(error => {
-        console.error('Error fetching data:', error);
-        // Handle errors as needed
-    });
+    if(dag){
+        fetch(`/graph`, {
+            method: "POST",
+            body: JSON.stringify({ path: `dags/${dag}` }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // console.log(data);
+            d3.select("#graphPanelSVG").select("g").selectAll(".output").remove()
+            createTreeDiagram(data.graph);
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            // Handle errors as needed
+        });
+    }
 }
 
 function updateLogsPanel() {
     const currentHash = window.location.hash.substring(1);
     const dag = currentHash.split("@")[0];
+    const executionStart = currentHash.split("@")[1];
 
-    fetch(`/executionLogs`, {
-        method: "POST",
-        body: JSON.stringify({ path: `logs/${dag}`}),
-    })
-    .then(response => response.json())
-    .then(data => {
-        const logButtonsContainer = document.getElementById('logButtons');
-        logButtonsContainer.innerHTML = '';
-        n = data.logList.length < 10? data.logList.length : 10;
-        // Create a button for each file
-        data.logList.slice(-n).reverse().forEach(dirName => {
-            const button = document.createElement('button');
-            
-            button.textContent = dirName;
-            logButtonsContainer.appendChild(button);
-            button.addEventListener('click', () => {
-                const d = window.location.hash.split("@")[0];
-                window.location.hash = `${d}@${dirName}`;
+    const logButtonsContainer = document.getElementById('logButtons');
+
+    if(dag){
+        fetch(`/executionLogs`, {
+            method: "POST",
+            body: JSON.stringify({ path: `logs/${dag}`}),
+        })
+        .then(response => response.json())
+        .then(data => {
+            logButtonsContainer.innerHTML = '';
+            n = data.logList.length < 10? data.logList.length : 10;
+            // Create a button for each file
+            data.logList.slice(-n).reverse().forEach(dirName => {
+                const button = document.createElement('button');
+                
+                button.textContent = dirName;
+                logButtonsContainer.appendChild(button);
+                button.addEventListener('click', () => {
+                    const d = window.location.hash.split("@")[0];
+                    window.location.hash = `${d}@${dirName}`;
+                });
             });
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            // Handle errors as needed
         });
-    })
-    .catch(error => {
-        console.error('Error fetching data:', error);
-        // Handle errors as needed
-    });
+    }
 }
 
 function updateLogTasksPanel() {
@@ -103,29 +110,55 @@ function updateLogTasksPanel() {
     const dag = currentHash.split("@")[0];
     const executionStart = currentHash.split("@")[1];
 
-    fetch(`/executionTaskLogs`, {
-        method: "POST",
-        body: JSON.stringify({ path: `logs/${dag}/${executionStart}` }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        const logButtonsContainer = document.getElementById('logTaskButtons');
-        logButtonsContainer.innerHTML = '';
-        // Create a button for each file
-        data.logTaskList.forEach(fileName => {
-            const button = document.createElement('button');
-            button.textContent = fileName;
-            button.addEventListener('click', () => {
-                const d = `${window.location.hash.split("@")[0]}@${window.location.hash.split("@")[1]}`;
-                window.location.hash = `${d}@${fileName}`;
+    const logButtonsContainer = document.getElementById('logTaskButtons');
+
+    if(dag && executionStart){
+        fetch(`/executionTaskLogs`, {
+            method: "POST",
+            body: JSON.stringify({ path: `logs/${dag}/${executionStart}` }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            logButtonsContainer.innerHTML = '';
+            // Create a button for each file
+            data.logTaskList.forEach(fileName => {
+                const button = document.createElement('button');
+                button.textContent = fileName;
+                button.addEventListener('click', () => {
+                    const d = `${window.location.hash.split("@")[0]}@${window.location.hash.split("@")[1]}`;
+                    window.location.hash = `${d}@${fileName}`;
+                });
+                logButtonsContainer.appendChild(button);
             });
-            logButtonsContainer.appendChild(button);
+        })
+        .catch(error => {
+            //console.error('Error fetching data:', error);
+            // Handle errors as needed
         });
-    })
-    .catch(error => {
-        //console.error('Error fetching data:', error);
-        // Handle errors as needed
-    });
+    } else{
+        logButtonsContainer.textContent = '';
+    }
+}
+
+function updateLogTaskViewer() {
+    const currentHash = window.location.hash.substring(1);
+    const dag = currentHash.split("@")[0];
+    const executionStart = currentHash.split("@")[1];
+    const task = currentHash.split("@")[2];
+
+    const codeElement = document.getElementById('logTaskViewerOutput');
+    var content = '';
+
+    if(dag && executionStart && task){
+        content = `Hello world`
+    }
+
+    if (codeElement) {
+        codeElement.textContent = content;
+    } else {
+        console.error("Couldn't find the code element with the specified class.");
+    }
+    hljs.highlightAll();
 }
 
 

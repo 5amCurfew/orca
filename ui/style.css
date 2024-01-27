@@ -1,19 +1,22 @@
 html {
     height: 100%;
+    width: 100%;
     font-family: FreeMono, monospace;
     color: white;
     background-color: #191919;
+    margin: 0; /* Resetting the default margin */
 }
 
 body {
     display: flex;
     height: 100%;
+    width: 100%;
     margin: 0; /* Resetting the default margin */
     border: 1px dashed gray;
 }
 
 #sidebar {
-    flex: 0 0 20%;
+    flex: 0 0 15%;
     background-color: #262626;
     border: 1px dashed gray;
     padding: 2%;
@@ -24,17 +27,18 @@ body {
     display: flex;
     flex-direction: column;
     border: 1px dashed gray;
-    padding: 2%;
+    padding: 0%;
 }
 
 #panelContainer {
     display: flex;
     flex-direction: column;
-    height: 100%; /* Make sure parent containers have fixed heights if necessary */
+    height: 100vh; /* Use viewport height instead of flex: 1 */
+    width: 100%;
 }
 
 #graphPanel {
-    flex: 0 0 35%; /* Initial size: 35%, No flexibility, No maximum size */
+    flex: 0 1 35%; /* Initial size: 35%, No flexibility, No maximum size */
     border: 1px dashed gray;
 }
 
@@ -43,7 +47,8 @@ body {
     flex: 1 1 0;
     flex-direction: row;
     border: 1px dashed gray;
-    overflow-y: scroll;
+    overflow-y: auto;
+    width: 100%;
 }
 
 #logButtons, #logTaskButtons {
@@ -51,15 +56,25 @@ body {
     height: 100%;
     box-sizing: border-box;
     border: 1px dashed grey;
-    overflow-y: scroll;
+    overflow-y: auto;
     padding: 20px;
 }
 
-#logViewer {
-    flex: 1;
+#logTaskViewer {
+    height: 100%;
+    width: 100%; /* Set width to 100% */
     box-sizing: border-box;
     border: 1px dashed grey;
-    overflow-y: scroll;
+    overflow-y: auto;
+    overflow-x: auto; /* Enable horizontal scrolling */
+}
+
+pre, code, .hljs{
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    text-wrap: wrap;
 }
 
 #graphPanelSVG {
@@ -67,7 +82,6 @@ body {
     height: 100%;
     cursor: pointer;
 }
-
 
 button {
     font-family: FreeMono, monospace;
@@ -81,18 +95,15 @@ button {
     cursor: pointer;
     transition: background-color 0.3s;
     border: 1px dashed gray;
+    text-wrap: wrap;
 }
 
 button:hover {
     background-color: #8c8c8c;
 }
 
-.button-highlighted {
-    background-color: #ffcc00; /* Change this color to your desired highlighting color */
-}
-
 .node{
-    fill: transparent;
+    fill: #1f1f1f;
     stroke: #cccccc;
 }
 
