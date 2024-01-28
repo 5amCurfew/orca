@@ -16,7 +16,7 @@ body {
 }
 
 #sidebar {
-    flex: 0 0 15%;
+    flex: 0 0 12%;
     background-color: #262626;
     border: 1px dashed gray;
     padding: 2%;
@@ -52,7 +52,7 @@ body {
 }
 
 #logButtons, #logTaskButtons {
-    flex: 0 0 20%;
+    flex: 0 0 18%;
     height: 100%;
     box-sizing: border-box;
     border: 1px dashed grey;
@@ -61,20 +61,21 @@ body {
 }
 
 #logTaskViewer {
-    height: 100%;
-    width: 100%; /* Set width to 100% */
+    flex: 1;
+    width: 0; /* Set a width of 0 to allow flex to control it */
     box-sizing: border-box;
     border: 1px dashed grey;
     overflow-y: auto;
     overflow-x: auto; /* Enable horizontal scrolling */
 }
 
-pre, code, .hljs{
-    width: 100%;
+pre, code, .hljs {
+    width: auto;
     height: 100%;
     margin: 0;
     padding: 0;
-    text-wrap: wrap;
+    white-space: pre-wrap;
+    overflow-x: auto;
 }
 
 #graphPanelSVG {

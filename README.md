@@ -38,32 +38,46 @@ To define a schedule, use the `schedule` keyword and provide a `cron` expression
 ### :rocket: Example
 ```
 task {
-    name = some_task
-    desc = start
-    cmd  = sleep 1.5 && echo "Task 1"
+    name = start
+    desc = start the DAG
+    cmd  = sleep 1.5 && echo "DAG started!"
 }
 
 task {
-    name = create_placeholder_file
-    desc = create a location to pipe data
-    cmd  = sleep 3 && touch target.json
+    name = check-xtkt-version
+    desc = checking version
+    cmd  = sleep 3 && xtkt --version && xtkt --help
 }
 
 task {
     name = extract
-    desc = extract data from Rick & Morty API into placeholder file
-    cmd  = xtkt ~/git/xtkt/_config_json/config_rickandmorty.json > target.json
+    desc = extract commit data from the Github API
+    cmd  = cd test && xtkt config_github.json | jq .
 }
 
 task {
-    name = some_other_task
-    desc = send
-    cmd  = sleep 2 && echo "rick & morty data sent!"
+    name = transform
+    desc = transform data
+    cmd  = sleep 1.5 && echo "data transformed!"
 }
 
-some_task >> create_placeholder_file
-some_task >> extract
-extract >> some_other_task
+task {
+    name = send-another-message
+    desc = send
+    cmd  = sleep 2 && echo "message sent!"
+}
+
+task {
+    name = finish
+    desc = checkpoint
+    cmd  = sleep 2 && echo "DAG finished!"
+}
+
+start >> check-xtkt-version
+check-xtkt-version >> extract
+start >> send-another-message
+extract >> transform
+[transform, send-another-message] >> finish
 
 schedule = 0 */10 * * * *
 ```

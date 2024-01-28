@@ -146,19 +146,20 @@ function updateLogTaskViewer() {
     const executionStart = currentHash.split("@")[1];
     const task = currentHash.split("@")[2];
 
-    const codeElement = document.getElementById('logTaskViewerOutput');
-    var content = '';
+    const logTaskViewerOutput = document.getElementById('logTaskViewerOutput');
 
     if(dag && executionStart && task){
-        content = `Hello world`
+        fetch(`/executionTaskLog`, {
+            method: "POST",
+            body: JSON.stringify({ path: `logs/${dag}/${executionStart}/${task}` }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            logTaskViewerOutput.textContent = data.log;
+        })
+    } else{
+        logTaskViewerOutput.textContent = '';
     }
-
-    if (codeElement) {
-        codeElement.textContent = content;
-    } else {
-        console.error("Couldn't find the code element with the specified class.");
-    }
-    hljs.highlightAll();
 }
 
 

@@ -27,6 +27,7 @@ func main() {
 	router.POST("/graph", routes.Graph)
 	router.POST("/executionLogs", routes.ExecutionLogs)
 	router.POST("/executionTaskLogs", routes.ExecutionTaskLogs)
+	router.POST("/executionTaskLog", routes.ExecutionTaskLog)
 	router.POST("/execute", routes.Execute)
 
 	go lib.Schedule()
