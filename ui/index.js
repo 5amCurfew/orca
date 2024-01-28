@@ -59,7 +59,6 @@ function updateGraphPanel() {
         })
         .then(response => response.json())
         .then(data => {
-            // console.log(data);
             d3.select("#graphPanelSVG").select("g").selectAll(".output").remove()
             createTreeDiagram(data.graph);
         })
@@ -86,7 +85,6 @@ function updateLogsPanel() {
         .then(data => {
             logButtonsContainer.innerHTML = '';
             n = data.logList.length < 10? data.logList.length : 10;
-            // Create a button for each file
             data.logList.slice(-n).reverse().forEach(dirName => {
                 const button = document.createElement('button');
                 
@@ -120,7 +118,6 @@ function updateLogTasksPanel() {
         .then(response => response.json())
         .then(data => {
             logButtonsContainer.innerHTML = '';
-            // Create a button for each file
             data.logTaskList.forEach(fileName => {
                 const button = document.createElement('button');
                 button.textContent = fileName;
