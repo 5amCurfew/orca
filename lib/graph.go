@@ -21,6 +21,7 @@ type Graph struct {
 	Schedule string             `json:"schedule"`
 	Context  context.Context    `json:"-"`
 	Cancel   context.CancelFunc `json:"-"`
+	mu       sync.Mutex         `json:"-"`
 	Failed   bool               `json:"failed"`
 }
 
@@ -107,9 +108,8 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 
 // Cancel cancels the execution of the graph
 func (g *Graph) Fail() {
-	var mu sync.Mutex
-	mu.Lock()
-	defer mu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	// Check if the context is already cancelled
 	if g.Cancel != nil {
