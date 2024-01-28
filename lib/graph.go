@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -13,11 +14,14 @@ import (
 )
 
 type Graph struct {
-	Name     string           `json:"name"`
-	Tasks    map[string]*Task `json:"tasks"`
-	Parents  util.DepencyMap  `json:"parents"`
-	Children util.DepencyMap  `json:"children"`
-	Schedule string           `json:"schedule"`
+	Name     string             `json:"name"`
+	Tasks    map[string]*Task   `json:"tasks"`
+	Parents  util.DepencyMap    `json:"parents"`
+	Children util.DepencyMap    `json:"children"`
+	Schedule string             `json:"schedule"`
+	Context  context.Context    `json:"-"`
+	Cancel   context.CancelFunc `json:"-"`
+	Failed   bool               `json:"failed"`
 }
 
 func NewGraph(filePath string) (*Graph, error) {
@@ -37,6 +41,7 @@ func NewGraph(filePath string) (*Graph, error) {
 		Parents:  make(util.DepencyMap),
 		Children: make(util.DepencyMap),
 		Schedule: schedule,
+		Failed:   false,
 	}
 
 	err = g.parseDependencies(filePath)
@@ -55,8 +60,11 @@ func NewGraph(filePath string) (*Graph, error) {
 
 // ExecuteDAG orchestrates and executes the tasks in the DAG
 func (g *Graph) Execute(dagExecutionStartTime time.Time) {
-
+	g.Failed = false
 	log.Printf("%s execution start at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
+
+	g.Context, g.Cancel = context.WithCancel(context.Background())
+	defer g.Cancel()
 
 	// Create a Map of Channels for task completion
 	completionChannels := make(map[string]chan bool)
@@ -68,6 +76,7 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 
 	// Use a WaitGroup to wait for all tasks to complete
 	var waitGroup sync.WaitGroup
+	var mu sync.Mutex
 
 	// Create & Start goroutines for each task
 	for taskName := range g.Tasks {
@@ -82,18 +91,36 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 				<-completionChMap[parent]
 			}
 
-			// Execute
-			task := g.Tasks[taskName]
-			task.execute(g.Name, dagExecutionStartTime, completionChMap)
+			g.Tasks[taskName].execute(dagExecutionStartTime, completionChMap, g)
 
+			mu.Lock()
 			close(completionChMap[taskName])
 			waitGroup.Done()
+			mu.Unlock()
 		}(taskName, completionChannels)
 	}
 
 	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
 	log.Printf("%s execution complete at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
+}
+
+// Cancel cancels the execution of the graph
+func (g *Graph) Fail() {
+	var mu sync.Mutex
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Check if the context is already cancelled
+	if g.Cancel != nil {
+		return
+	}
+
+	// Cancel the context, signalling all associated goroutines to stop
+	g.Cancel()
+	// Set the failed flag to true
+	g.Failed = true
+	log.Printf("%s task execution failed, remaining tasks cancelled at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
 }
 
 func (g *Graph) parseDependencies(filePath string) error {
