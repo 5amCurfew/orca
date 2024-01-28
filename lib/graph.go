@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -14,58 +13,18 @@ import (
 )
 
 type Graph struct {
-	Name     string             `json:"name"`
-	Tasks    map[string]*Task   `json:"tasks"`
-	Parents  util.DepencyMap    `json:"parents"`
-	Children util.DepencyMap    `json:"children"`
-	Schedule string             `json:"schedule"`
-	Context  context.Context    `json:"-"`
-	Cancel   context.CancelFunc `json:"-"`
-	mu       sync.Mutex         `json:"-"`
-	Failed   bool               `json:"failed"`
-}
-
-func NewGraph(filePath string) (*Graph, error) {
-	tasks, err := parseTasks(filePath)
-	if err != nil {
-		return &Graph{}, errors.New(err.Error())
-	}
-
-	schedule, err := parseSchedule(filePath)
-	if err != nil {
-		return &Graph{}, errors.New(err.Error())
-	}
-
-	g := &Graph{
-		Name:     filePath[5:strings.Index(filePath, ".orca")],
-		Tasks:    tasks,
-		Parents:  make(util.DepencyMap),
-		Children: make(util.DepencyMap),
-		Schedule: schedule,
-		Failed:   false,
-	}
-
-	err = g.parseDependencies(filePath)
-	if err != nil {
-		return &Graph{}, errors.New(err.Error())
-	}
-
-	dirPath := fmt.Sprintf("logs/%s", g.Name)
-	err = os.MkdirAll(dirPath, os.ModePerm)
-	if err != nil {
-		log.Printf("Error creating logs directory: %s\n", err)
-	}
-
-	return g, nil
+	Name     string           `json:"name"`
+	Tasks    map[string]*Task `json:"tasks"`
+	Parents  util.DepencyMap  `json:"parents"`
+	Children util.DepencyMap  `json:"children"`
+	Schedule string           `json:"schedule"`
+	Failed   bool             `json:"failed"`
 }
 
 // ExecuteDAG orchestrates and executes the tasks in the DAG
 func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 	g.Failed = false
 	log.Printf("%s execution start at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
-
-	g.Context, g.Cancel = context.WithCancel(context.Background())
-	defer g.Cancel()
 
 	// Create a Map of Channels for task completion
 	completionChannels := make(map[string]chan bool)
@@ -104,23 +63,6 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
 	log.Printf("%s execution complete at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
-}
-
-// Cancel cancels the execution of the graph
-func (g *Graph) Fail() {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	// Check if the context is already cancelled
-	if g.Cancel != nil {
-		return
-	}
-
-	// Cancel the context, signalling all associated goroutines to stop
-	g.Cancel()
-	// Set the failed flag to true
-	g.Failed = true
-	log.Printf("%s task execution failed, remaining tasks cancelled at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
 }
 
 func (g *Graph) parseDependencies(filePath string) error {
@@ -169,4 +111,38 @@ func (g *Graph) findDependencies(node string, out map[string]struct{}) {
 			g.findDependencies(key, out)
 		}
 	}
+}
+
+func NewGraph(filePath string) (*Graph, error) {
+	tasks, err := parseTasks(filePath)
+	if err != nil {
+		return &Graph{}, errors.New(err.Error())
+	}
+
+	schedule, err := parseSchedule(filePath)
+	if err != nil {
+		return &Graph{}, errors.New(err.Error())
+	}
+
+	g := &Graph{
+		Name:     filePath[5:strings.Index(filePath, ".orca")],
+		Tasks:    tasks,
+		Parents:  make(util.DepencyMap),
+		Children: make(util.DepencyMap),
+		Schedule: schedule,
+		Failed:   false,
+	}
+
+	err = g.parseDependencies(filePath)
+	if err != nil {
+		return &Graph{}, errors.New(err.Error())
+	}
+
+	dirPath := fmt.Sprintf("logs/%s", g.Name)
+	err = os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		log.Printf("Error creating logs directory: %s\n", err)
+	}
+
+	return g, nil
 }
