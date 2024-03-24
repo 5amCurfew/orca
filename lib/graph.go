@@ -2,29 +2,27 @@ package lib
 
 import (
 	"errors"
-	"fmt"
-	"log"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/5amCurfew/orca/util"
+	log "github.com/sirupsen/logrus"
 )
 
+type DepencyMap map[string]map[string]struct{}
+
 type Graph struct {
+	File     string           `json:"file"`
 	Name     string           `json:"name"`
 	Tasks    map[string]*Task `json:"tasks"`
-	Parents  util.DepencyMap  `json:"parents"`
-	Children util.DepencyMap  `json:"children"`
-	Schedule string           `json:"schedule"`
-	Failed   bool             `json:"failed"`
+	Parents  DepencyMap       `json:"parents"`
+	Children DepencyMap       `json:"children"`
 }
 
-// ExecuteDAG orchestrates and executes the tasks in the DAG
+// //////////////////////////////
+// Execute DAG
+// //////////////////////////////
 func (g *Graph) Execute(dagExecutionStartTime time.Time) {
-	g.Failed = false
-	log.Printf("%s execution start at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
+	log.Printf("%s execution started", g.Name)
 
 	// Create a Map of Channels for task completion
 	completionChannels := make(map[string]chan bool)
@@ -36,7 +34,6 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 
 	// Use a WaitGroup to wait for all tasks to complete
 	var waitGroup sync.WaitGroup
-	var mu sync.Mutex
 
 	// Create & Start goroutines for each task
 	for taskName := range g.Tasks {
@@ -44,7 +41,7 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 		waitGroup.Add(1)
 		g.Tasks[taskName].Status = Pending
 
-		// Start goroutines that is blocked until all parents have sent successful completion message
+		// Start goroutines that are blocked until all parents have sent successful completion message
 		go func(taskName string, completionChMap map[string]chan bool) {
 			// Wait for all parents to complete
 			for parent := range g.Parents[taskName] {
@@ -53,10 +50,8 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 
 			g.Tasks[taskName].execute(dagExecutionStartTime, completionChMap, g)
 
-			mu.Lock()
 			close(completionChMap[taskName])
 			waitGroup.Done()
-			mu.Unlock()
 		}(taskName, completionChannels)
 	}
 
@@ -65,15 +60,10 @@ func (g *Graph) Execute(dagExecutionStartTime time.Time) {
 	log.Printf("%s execution complete at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
 }
 
-func (g *Graph) parseDependencies(filePath string) error {
-	err := parseDependencies(filePath, g)
-	if err != nil {
-		return errors.New(err.Error())
-	}
-	return nil
-}
-
-func (g *Graph) dependOn(child, parent string) error {
+// //////////////////////////////
+// Add Dependency Edges to Graph
+// //////////////////////////////
+func (g *Graph) addDependency(child, parent string) error {
 	if child == parent {
 		return errors.New("self-referential dependencies not allowed")
 	}
@@ -83,66 +73,46 @@ func (g *Graph) dependOn(child, parent string) error {
 	}
 
 	// Add Edges
-	util.AddEdge(g.Parents, child, parent)
-	util.AddEdge(g.Children, parent, child)
+	addEdge(g.Parents, child, parent)
+	addEdge(g.Children, parent, child)
 
 	return nil
 }
 
+// //////////////////////////////
+// "Does <CHILD> depend on <PARENT>?"
+// //////////////////////////////
 func (g *Graph) dependsOn(child, parent string) bool {
-	_, ok := g.dependencies(parent)[child]
-	return ok
+	allChildren := make(map[string]struct{})
+	g.findAllChildren(parent, allChildren)
+	_, isDependant := allChildren[child]
+	return isDependant
 }
 
-func (g *Graph) dependencies(root string) map[string]struct{} {
-	out := make(map[string]struct{})
-	g.findDependencies(root, out)
-	return out
-}
-
-func (g *Graph) findDependencies(node string, out map[string]struct{}) {
-	if _, ok := g.Tasks[node]; !ok {
+// //////////////////////////////
+// Find All Dependency Edges (direct and indriect)
+// //////////////////////////////
+func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
+	if _, ok := g.Tasks[parent]; !ok {
 		return
 	}
 
-	for key, nextNode := range g.Children[node] {
-		if _, ok := out[key]; !ok {
-			out[key] = nextNode
-			g.findDependencies(key, out)
+	for child, nextChild := range g.Children[parent] {
+		if _, ok := children[child]; !ok {
+			children[child] = nextChild
+			g.findAllChildren(child, children)
 		}
 	}
 }
 
-func NewGraph(filePath string) (*Graph, error) {
-	tasks, err := parseTasks(filePath)
-	if err != nil {
-		return &Graph{}, errors.New(err.Error())
+// //////////////////////////////
+// Add Dependency Edge
+// //////////////////////////////
+func addEdge(dm DepencyMap, from, to string) {
+	nodes, ok := dm[from]
+	if !ok {
+		nodes = make(map[string]struct{})
+		dm[from] = nodes
 	}
-
-	schedule, err := parseSchedule(filePath)
-	if err != nil {
-		return &Graph{}, errors.New(err.Error())
-	}
-
-	g := &Graph{
-		Name:     filePath[5:strings.Index(filePath, ".orca")],
-		Tasks:    tasks,
-		Parents:  make(util.DepencyMap),
-		Children: make(util.DepencyMap),
-		Schedule: schedule,
-		Failed:   false,
-	}
-
-	err = g.parseDependencies(filePath)
-	if err != nil {
-		return &Graph{}, errors.New(err.Error())
-	}
-
-	dirPath := fmt.Sprintf("logs/%s", g.Name)
-	err = os.MkdirAll(dirPath, os.ModePerm)
-	if err != nil {
-		log.Printf("Error creating logs directory: %s\n", err)
-	}
-
-	return g, nil
+	nodes[to] = struct{}{}
 }

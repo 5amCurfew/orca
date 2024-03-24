@@ -7,7 +7,7 @@
  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 ```
 
-`orca` is a bash command orchestration tool.
+`orca` is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph
 
 - [:computer: Installation](#computer-installation)
 - [:wrench: Settings](#nut_and_bolt-using-with-singerio-targets)
@@ -27,7 +27,7 @@ via Homebrew: `brew tap 5amCurfew/5amCurfew; brew install 5amCurfew/5amCurfew/or
 
 ### :pencil: DSL for .orca
 
-DAGs are defined in `.orca` files in a `dags/` directory (relative to where `orca` is run). `orca` follows a similar syntax to [Airflow](https://airflow.apache.org/docs/apache-airflow/stable/concepts.html), defining tasks, dependencies and a schedule.
+DAGs are defined in `.orca` files in the relative path directory.
 
 To define a task, use the `task` keyword and provide a name, description and `bash` command.
 
@@ -79,8 +79,4 @@ start >> send-another-message
 extract >> transform
 [transform, send-another-message] >> finish
 
-schedule = 0 */10 * * * *
 ```
-
-### :bar_chart: UI
-

@@ -1,39 +1,58 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/5amCurfew/orca/lib"
-	"github.com/5amCurfew/orca/routes"
-	"github.com/gin-gonic/gin"
+	lib "github.com/5amCurfew/orca/lib"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
+var version = "0.1.0"
+
 func main() {
+	Execute()
+}
 
-	err := os.MkdirAll("logs", os.ModePerm)
-	if err != nil {
-		fmt.Println("Error creating logs directory file:", err)
-	}
+var rootCmd = &cobra.Command{
+	Use:     "orca [PATH_TO_DAG_FILE]",
+	Version: version,
+	Short:   "orca - lightweight bash orchestrator",
+	Long:    `orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph`,
+	Args:    cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		log.SetFormatter(&log.JSONFormatter{})
 
-	router := gin.Default()
+		var cfgPath string
+		if len(args) == 0 {
+			// If no argument provided, look for config.json in the current directory
+			log.Info("no DAG file path provided, defaulting to dag.orca")
+			cfgPath = "dag.orca"
+		} else {
+			cfgPath = args[0]
+		}
 
-	router.Static("/ui", "./ui")
-	router.LoadHTMLGlob("ui/*.html")
+		g, err := lib.NewGraph(cfgPath)
+		if err != nil {
+			log.Error(err)
+			os.Exit(1)
+		}
 
-	router.GET("/ping", routes.Ping)
-	router.GET("/ui", routes.UI)
-	router.GET("/refresh", routes.Refresh)
-	router.POST("/graph", routes.Graph)
-	router.POST("/executionLogs", routes.ExecutionLogs)
-	router.POST("/executionTaskLogs", routes.ExecutionTaskLogs)
-	router.POST("/executionTaskLog", routes.ExecutionTaskLog)
-	router.POST("/execute", routes.Execute)
+		jsonData, _ := json.Marshal(g)
+		var gMap map[string]interface{}
+		_ = json.Unmarshal(jsonData, &gMap)
+		log.WithFields(gMap).Info("Graph")
 
-	go lib.Schedule()
+		g.Execute(time.Now())
+	},
+}
 
-	if err := router.Run(":8080"); err != nil {
-		fmt.Fprintf(os.Stderr, "error starting Gin server: %s", err)
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "error using orca: '%s'", err)
 		os.Exit(1)
 	}
 }

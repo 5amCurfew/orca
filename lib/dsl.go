@@ -2,84 +2,50 @@ package lib
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func parseTasks(filePath string) (map[string]*Task, error) {
-	file, err := os.Open(filePath)
+// //////////////////////////////
+// Create Graph from File Path
+// //////////////////////////////
+func NewGraph(filePath string) (*Graph, error) {
+	tasks, err := parseTasks(filePath)
 	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	tasks := make(map[string]*Task)
-	var currentTask *Task
-	var currentField string
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line)
-
-		switch {
-		case strings.HasPrefix(line, "task {"):
-			currentTask = &Task{Status: Pending}
-		case strings.HasPrefix(line, "name"):
-			fields := strings.Split(line, "=")
-			currentTask.Name = strings.TrimSpace(fields[1])
-		case strings.HasPrefix(line, "desc"):
-			fields := strings.Split(line, "=")
-			currentField = "desc"
-			currentTask.Desc = strings.TrimSpace(fields[1])
-		case strings.HasPrefix(line, "cmd"):
-			fields := strings.Split(line, "=")
-			currentField = "cmd"
-			currentTask.Command = strings.TrimSpace(fields[1])
-		case line == "}" && currentTask != nil:
-			tasks[currentTask.Name] = currentTask
-			currentTask = nil
-			currentField = ""
-		default:
-			if currentField == "desc" {
-				currentTask.Desc += " " + strings.TrimSpace(line)
-			} else if currentField == "cmd" {
-				currentTask.Command += " " + strings.TrimSpace(line)
-			}
-		}
+		return &Graph{}, errors.New(err.Error())
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	g := &Graph{
+		File:     filePath,
+		Name:     filePath[:strings.Index(filePath, ".orca")],
+		Tasks:    tasks,
+		Parents:  make(DepencyMap),
+		Children: make(DepencyMap),
 	}
 
-	return tasks, nil
+	err = g.parseDependencies()
+	if err != nil {
+		return &Graph{}, errors.New(err.Error())
+	}
+
+	dirPath := fmt.Sprintf(".orca/%s", g.Name)
+	err = os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		log.Errorf("Error creating logs directory: %s\n", err)
+	}
+
+	return g, nil
 }
 
-func parseSchedule(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "schedule") {
-			fields := strings.Split(line, "=")
-			return strings.TrimSpace(fields[1]), nil
-		}
-	}
-	return "", nil
-}
-
-func parseDependencies(filePath string, g *Graph) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
+// //////////////////////////////
+// Parse Dependency Edges from File
+// //////////////////////////////
+func (g *Graph) parseDependencies() error {
+	file, _ := os.Open(g.File)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -104,7 +70,7 @@ func parseDependencies(filePath string, g *Graph) error {
 				}
 
 				for _, dependency := range dependencyList {
-					err := g.dependOn(dependentTask, dependency)
+					err := g.addDependency(dependentTask, dependency)
 					if err != nil {
 						fmt.Println(err.Error())
 						return err
@@ -112,7 +78,7 @@ func parseDependencies(filePath string, g *Graph) error {
 				}
 			} else {
 				// Case where there is a single dependency
-				err := g.dependOn(dependentTask, dependencies)
+				err := g.addDependency(dependentTask, dependencies)
 				if err != nil {
 					return err
 				}
