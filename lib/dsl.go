@@ -42,6 +42,59 @@ func NewGraph(filePath string) (*Graph, error) {
 }
 
 // //////////////////////////////
+// Parse Nodes from File
+// //////////////////////////////
+func parseTasks(filePath string) (map[string]*Task, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	tasks := make(map[string]*Task)
+	var currentTask *Task
+	var currentField string
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+
+		switch {
+		case strings.HasPrefix(line, "task {"):
+			currentTask = &Task{Status: Pending}
+		case strings.HasPrefix(line, "name"):
+			fields := strings.Split(line, "=")
+			currentTask.Name = strings.TrimSpace(fields[1])
+		case strings.HasPrefix(line, "desc"):
+			fields := strings.Split(line, "=")
+			currentField = "desc"
+			currentTask.Desc = strings.TrimSpace(fields[1])
+		case strings.HasPrefix(line, "cmd"):
+			fields := strings.Split(line, "=")
+			currentField = "cmd"
+			currentTask.Command = strings.TrimSpace(fields[1])
+		case line == "}" && currentTask != nil:
+			tasks[currentTask.Name] = currentTask
+			currentTask = nil
+			currentField = ""
+		default:
+			if currentField == "desc" {
+				currentTask.Desc += " " + strings.TrimSpace(line)
+			} else if currentField == "cmd" {
+				currentTask.Command += " " + strings.TrimSpace(line)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+// //////////////////////////////
 // Parse Dependency Edges from File
 // //////////////////////////////
 func (g *Graph) parseDependencies() error {
@@ -72,7 +125,7 @@ func (g *Graph) parseDependencies() error {
 				for _, dependency := range dependencyList {
 					err := g.addDependency(dependentTask, dependency)
 					if err != nil {
-						fmt.Println(err.Error())
+						log.Error(err.Error())
 						return err
 					}
 				}

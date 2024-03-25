@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	lib "github.com/5amCurfew/orca/lib"
 	log "github.com/sirupsen/logrus"
@@ -46,7 +45,7 @@ var rootCmd = &cobra.Command{
 		_ = json.Unmarshal(jsonData, &gMap)
 		log.WithFields(gMap).Info("Graph")
 
-		g.Execute(time.Now())
+		g.Execute()
 	},
 }
 

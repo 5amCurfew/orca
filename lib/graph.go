@@ -2,6 +2,7 @@ package lib
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -21,43 +22,54 @@ type Graph struct {
 // //////////////////////////////
 // Execute DAG
 // //////////////////////////////
-func (g *Graph) Execute(dagExecutionStartTime time.Time) {
+func (g *Graph) Execute() {
+	dagExecutionStartTime := time.Now()
 	log.Printf("%s execution started", g.Name)
 
 	// Create a Map of Channels for task completion
-	completionChannels := make(map[string]chan bool)
+	completionRelay := make(map[string]chan bool)
 
-	// Initialise channel for each task
-	for taskName := range g.Tasks {
-		completionChannels[taskName] = make(chan bool, 1)
+	// Initialise channel for each task dependency signal
+	for taskKey := range g.Tasks {
+		for parent := range g.Parents[taskKey] {
+			completionRelay[fmt.Sprint(parent, "->", taskKey)] = make(chan bool, 1)
+		}
 	}
 
 	// Use a WaitGroup to wait for all tasks to complete
 	var waitGroup sync.WaitGroup
 
 	// Create & Start goroutines for each task
-	for taskName := range g.Tasks {
+	for taskKey := range g.Tasks {
 		// Increment the wait group
 		waitGroup.Add(1)
-		g.Tasks[taskName].Status = Pending
+		g.Tasks[taskKey].Status = Pending
 
 		// Start goroutines that are blocked until all parents have sent successful completion message
-		go func(taskName string, completionChMap map[string]chan bool) {
+		go func(taskKey string, completionChMap map[string]chan bool) {
 			// Wait for all parents to complete
-			for parent := range g.Parents[taskName] {
-				<-completionChMap[parent]
+			for parent := range g.Parents[taskKey] {
+				successSignal := <-completionRelay[fmt.Sprint(parent, "->", taskKey)]
+				if !successSignal {
+					log.Warnf("parent task %s failed, aborting %s", parent, taskKey)
+					for child := range g.Children[taskKey] {
+						completionRelay[fmt.Sprint(taskKey, "->", child)] <- false
+					}
+					close(completionChMap[fmt.Sprint(parent, "->", taskKey)])
+					waitGroup.Done()
+					return
+				}
+				close(completionChMap[fmt.Sprint(parent, "->", taskKey)])
 			}
 
-			g.Tasks[taskName].execute(dagExecutionStartTime, completionChMap, g)
-
-			close(completionChMap[taskName])
+			g.Tasks[taskKey].execute(dagExecutionStartTime, completionChMap, g)
 			waitGroup.Done()
-		}(taskName, completionChannels)
+		}(taskKey, completionRelay)
 	}
 
 	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
-	log.Printf("%s execution complete at %s\n", g.Name, time.Now().Format("2006-01-02 15:04:05"))
+	log.Infof("%s.orca execution complete", g.Name)
 }
 
 // //////////////////////////////
