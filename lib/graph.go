@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -77,11 +76,11 @@ func (g *Graph) Execute() {
 // //////////////////////////////
 func (g *Graph) addDependency(child, parent string) error {
 	if child == parent {
-		return errors.New("self-referential dependencies not allowed")
+		return fmt.Errorf("self-referential dependency: %s", child)
 	}
 
 	if g.dependsOn(parent, child) {
-		return errors.New("circular dependencies not allowed")
+		return fmt.Errorf("circular dependency: %s, %s", child, parent)
 	}
 
 	// Add Edges

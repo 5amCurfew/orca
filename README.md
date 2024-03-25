@@ -15,7 +15,7 @@
 - [:rocket: Example](#rocket-example)
 - [:bar_chart: UI](#bar_chart-ui)
 
-**v0.0.1**
+**v0.1.0**
 
 ### :computer: Installation
 
@@ -31,52 +31,62 @@ DAGs are defined in `.orca` files in the relative path directory.
 
 To define a task, use the `task` keyword and provide a name, description and `bash` command.
 
-Use the bit-shift operator `>>` to define dependencies using task names (using a list to define multiple parent tasks).
-
-To define a schedule, use the `schedule` keyword and provide a `cron` expression.
+Use the bit-shift operator `>>` to define dependencies using task names (using a list to define multiple parent tasks) using the syntax `[<PARENT_1>, <PARENT_2>, ...] >> <CHILD>` for each child task. See the example below for more information.
 
 ### :rocket: Example
 ```
 task {
-    name = start
+    name = step-1
     desc = start the DAG
-    cmd  = sleep 1.5 && echo "DAG started!"
+    cmd  = sleep 1 && echo "DAG started!"
 }
 
 task {
-    name = check-xtkt-version
-    desc = checking version
-    cmd  = sleep 3 && xtkt --version && xtkt --help
+    name = step-2-1
+    desc = do something for this task
+    cmd  = sleep 3 && echo "Step 2.1"
 }
 
 task {
-    name = extract
-    desc = extract commit data from the Github API
-    cmd  = cd test && xtkt config_github.json | jq .
+    name = step-2-2
+    desc = do something for this task
+    cmd  = sleep 1 && echo "Step 2.2"
 }
 
 task {
-    name = transform
-    desc = transform data
-    cmd  = sleep 1.5 && echo "data transformed!"
+    name = step-3
+    desc = do something for this task
+    cmd  = sleep 3 && echo "Step 3"
 }
 
 task {
-    name = send-another-message
-    desc = send
-    cmd  = sleep 2 && echo "message sent!"
+    name = step-4
+    desc = do something for this task
+    cmd  = sleep 2 && echo "Step 4"
 }
 
 task {
-    name = finish
-    desc = checkpoint
-    cmd  = sleep 2 && echo "DAG finished!"
+    name = step-5
+    desc = do something for this task
+    cmd  = sleep 1 && echo "Step 5"
 }
 
-start >> check-xtkt-version
-check-xtkt-version >> extract
-start >> send-another-message
-extract >> transform
-[transform, send-another-message] >> finish
+task {
+    name = step-6
+    desc = do something for this task
+    cmd  = sleep 2 && echo "Step 6"
+}
 
+task {
+    name = step-7
+    desc = do something for this task
+    cmd  = sleep 2 && echo "Step 7"
+}
+
+step-1 >> step-2-1
+step-1 >> step-2-2
+step-2-2 >> step-3
+step-3 >> step-4
+step-2-1 >> step-5
+[step-4, step-5] >> step-6
 ```
