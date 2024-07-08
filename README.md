@@ -13,7 +13,7 @@
 - [:pencil: DSL for .orca](#pencil-metadata)
 - [:rocket: Example](#rocket-example)
 
-**v0.1.2**
+**v0.1.6**
 
 ### :computer: Installation
 
