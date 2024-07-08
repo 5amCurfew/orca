@@ -10,10 +10,8 @@
 `orca` is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph
 
 - [:computer: Installation](#computer-installation)
-- [:wrench: Settings](#nut_and_bolt-using-with-singerio-targets)
 - [:pencil: DSL for .orca](#pencil-metadata)
 - [:rocket: Example](#rocket-example)
-- [:bar_chart: UI](#bar_chart-ui)
 
 **v0.1.0**
 
@@ -23,7 +21,6 @@ Locally: `git clone git@github.com:5amCurfew/orca.git`; `make build`
 
 via Homebrew: `brew tap 5amCurfew/5amCurfew; brew install 5amCurfew/5amCurfew/orca`
 
-### :wrench: Settings
 
 ### :pencil: DSL for .orca
 
@@ -49,8 +46,8 @@ task {
 
 task {
     name = step-2-2
-    desc = do something for this task
-    cmd  = sleep 1 && echo "Step 2.2"
+    desc = do something that will fail!
+    cmd  = sleep 1 && cd into_a_directory_that_does_not_exist
 }
 
 task {
