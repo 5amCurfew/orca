@@ -28,7 +28,7 @@ brews:
     repository:
       owner: 5amCurfew
       name: homebrew-5amCurfew
-      token: "{{ .Env.ORCA_RELEASE_TOKEN }}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: 5amCurfew
 
