@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 		jsonData, _ := json.Marshal(g)
 		var gMap map[string]interface{}
 		_ = json.Unmarshal(jsonData, &gMap)
-		log.WithFields(gMap).Info("Graph")
+		// log.WithFields(gMap).Info("Graph")
 
 		g.Execute()
 	},

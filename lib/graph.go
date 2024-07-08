@@ -23,7 +23,7 @@ type Graph struct {
 // //////////////////////////////
 func (g *Graph) Execute() {
 	dagExecutionStartTime := time.Now()
-	log.Printf("%s execution started", g.Name)
+	log.Printf("%s execution started \033[0m", g.Name)
 
 	// Create a Map of Channels for task completion
 	completionRelay := make(map[string]chan bool)
