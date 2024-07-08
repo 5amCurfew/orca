@@ -14,8 +14,6 @@ before:
     - go mod tidy
 
 builds:
-  - env:
-      - CGO_ENABLED=0
   - binary: orca
     goos:
       - darwin
@@ -26,11 +24,11 @@ builds:
 
 brews:
   -
-    name: orca
     homepage: "https://github.com/5amCurfew/orca"
-    tap:
+    repository:
       owner: 5amCurfew
       name: homebrew-5amCurfew
+      token: "{{ .Env.ORCA_RELEASE_TOKEN }}"
     commit_author:
       name: 5amCurfew
 
