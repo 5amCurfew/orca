@@ -18,12 +18,14 @@ type Graph struct {
 	Children DepencyMap       `json:"children"`
 }
 
+var withTaskFailures = false
+
 // //////////////////////////////
 // Execute DAG
 // //////////////////////////////
 func (g *Graph) Execute() {
 	dagExecutionStartTime := time.Now()
-	log.Printf("%s execution started \033[0m", g.Name)
+	log.Printf("[\u2714 DAG START] %s execution started", g.Name)
 
 	// Create a Map of Channels for task completion
 	completionRelay := make(map[string]chan bool)
@@ -50,7 +52,8 @@ func (g *Graph) Execute() {
 			for parent := range g.Parents[taskKey] {
 				successSignal := <-completionRelay[fmt.Sprint(parent, "->", taskKey)]
 				if !successSignal {
-					log.Warnf("parent task %s failed, aborting %s", parent, taskKey)
+					withTaskFailures = true
+					log.Warnf("[~ SKIPPED] parent task %s failed, aborting %s", parent, taskKey)
 					for child := range g.Children[taskKey] {
 						completionRelay[fmt.Sprint(taskKey, "->", child)] <- false
 					}
@@ -68,7 +71,11 @@ func (g *Graph) Execute() {
 
 	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
-	log.Infof("%s.orca execution complete", g.Name)
+	if withTaskFailures {
+		log.Warnf("[~ DAG COMPLETE] %s.orca execution completed with failures", g.Name)
+	} else {
+		log.Infof("[\u2714 DAG COMPLETE] %s.orca execution successful", g.Name)
+	}
 }
 
 // //////////////////////////////

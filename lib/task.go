@@ -28,7 +28,7 @@ type Task struct {
 
 // ExecuteTask executes a Task's command
 func (t *Task) execute(dagExecutionStartTime time.Time, completionRelay map[string]chan bool, g *Graph) {
-	log.Infof("%s task execution started", t.Name)
+	log.Infof("[START] %s task execution started", t.Name)
 
 	cmdParts := []string{"bash", "-c", t.Command}
 	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
@@ -41,7 +41,7 @@ func (t *Task) execute(dagExecutionStartTime time.Time, completionRelay map[stri
 	// Create log file
 	logFile, err := os.Create(fmt.Sprintf("%s/%s.log", logDir, t.Name))
 	if err != nil {
-		log.Warnf("Error creating log output file: %s", err)
+		log.Errorf("error creating log output file: %s", err)
 		t.Status = Failed
 		for child := range g.Children[t.Name] {
 			completionRelay[fmt.Sprint(t.Name, "->", child)] <- false
@@ -53,13 +53,13 @@ func (t *Task) execute(dagExecutionStartTime time.Time, completionRelay map[stri
 	cmd.Stderr = logFile
 
 	if err := cmd.Run(); err != nil {
-		log.Warnf("task %s execution failed", t.Name)
+		log.Errorf("[X FAILED] task %s execution failed", t.Name)
 		t.Status = Failed
 		for child := range g.Children[t.Name] {
 			completionRelay[fmt.Sprint(t.Name, "->", child)] <- false
 		}
 	} else {
-		log.Infof("%s task execution completed sucessfully", t.Name)
+		log.Infof("[\u2714 SUCCESS] %s task execution successful", t.Name)
 		t.Status = Success
 		for child := range g.Children[t.Name] {
 			completionRelay[fmt.Sprint(t.Name, "->", child)] <- true

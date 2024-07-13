@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	lib "github.com/5amCurfew/orca/lib"
 	log "github.com/sirupsen/logrus"
@@ -23,12 +24,16 @@ var rootCmd = &cobra.Command{
 	Long:    `orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.SetFormatter(&log.JSONFormatter{})
+		log.SetFormatter(&log.TextFormatter{
+			ForceColors:     true,
+			FullTimestamp:   true,
+			TimestampFormat: time.RFC3339,
+		})
 
 		var cfgPath string
 		if len(args) == 0 {
 			// If no argument provided, look for config.json in the current directory
-			log.Info("no DAG file path provided, defaulting to dag.orca")
+			log.Info("[INIT] .orca DAG file path not provided -> defaulting to dag.orca")
 			cfgPath = "dag.orca"
 		} else {
 			cfgPath = args[0]
@@ -36,7 +41,7 @@ var rootCmd = &cobra.Command{
 
 		g, err := lib.NewGraph(cfgPath)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("[INIT] %s", err)
 			os.Exit(1)
 		}
 
@@ -51,7 +56,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "error using orca: '%s'", err)
+		fmt.Fprintf(os.Stderr, "[INIT] error using orca: '%s'", err)
 		os.Exit(1)
 	}
 }
