@@ -1,5 +1,5 @@
 .orca
-dag.orca
+example.orca
 dags/
 logs/
 test*
