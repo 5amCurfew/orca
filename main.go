@@ -20,7 +20,7 @@ func main() {
 var rootCmd = &cobra.Command{
 	Use:     "orca [PATH_TO_DAG_FILE]",
 	Version: version,
-	Short:   "orca - lightweight bash orchestrator",
+	Short:   "orca - bash orchestrator",
 	Long:    `orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
