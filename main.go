@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.1.7"
+var version = "0.1.8"
 
 func main() {
 	Execute()
@@ -48,7 +48,6 @@ var rootCmd = &cobra.Command{
 		jsonData, _ := json.Marshal(g)
 		var gMap map[string]interface{}
 		_ = json.Unmarshal(jsonData, &gMap)
-		// log.WithFields(gMap).Info("Graph")
 
 		g.Execute()
 	},

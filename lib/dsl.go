@@ -54,6 +54,7 @@ func parseTasks(filePath string) (map[string]*Task, error) {
 	tasks := make(map[string]*Task)
 	var currentTask *Task
 	var currentField string
+	var parentRuleValue ParentRule
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -63,6 +64,7 @@ func parseTasks(filePath string) (map[string]*Task, error) {
 		switch {
 		case strings.HasPrefix(line, "task {"):
 			currentTask = &Task{Status: Pending}
+			parentRuleValue = AllSuccess
 		case strings.HasPrefix(line, "name"):
 			fields := strings.Split(line, "=")
 			currentTask.Name = strings.TrimSpace(fields[1])
@@ -74,17 +76,20 @@ func parseTasks(filePath string) (map[string]*Task, error) {
 			fields := strings.Split(line, "=")
 			currentField = "cmd"
 			currentTask.Command = strings.TrimSpace(fields[1])
-		case strings.HasPrefix(line, "ParentRule"):
+		case strings.HasPrefix(line, "parentRule"):
 			fields := strings.Split(line, "=")
-			currentField = "ParentRule"
-			value := ParentRule(strings.TrimSpace(fields[1]))
-			if value == AllComplete || value == AllSuccess {
-				currentTask.ParentRule = value
-			} else {
+			currentField = "parentRule"
+			value := strings.TrimSpace(fields[1])
+			switch value {
+			case "complete":
+				parentRuleValue = AllComplete
+			case "success":
+				parentRuleValue = AllSuccess
+			default:
 				log.Errorf("invalid dependency rule: %s - defaulting to success", value)
-				currentTask.ParentRule = AllSuccess
 			}
 		case line == "}" && currentTask != nil:
+			currentTask.ParentRule = parentRuleValue
 			tasks[currentTask.Name] = currentTask
 			currentTask = nil
 			currentField = ""

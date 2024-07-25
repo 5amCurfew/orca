@@ -55,24 +55,29 @@ func (g *Graph) Execute() {
 
 				if signal == Failed {
 					withTaskFailures = true
-					log.Warnf("[~ SKIPPED] parent task %s failed, skipping %s", parent, taskKey)
-					for child := range g.Children[taskKey] {
-						completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+					if g.Tasks[taskKey].ParentRule == AllSuccess {
+						log.Warnf("[~ SKIPPED] parent task %s failed, skipping %s", parent, taskKey)
+						for child := range g.Children[taskKey] {
+							completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+						}
+						close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+						return
 					}
-					close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
-					return
 				}
 
 				if signal == Skipped {
-					log.Warnf("[~ SKIPPED] parent task %s skipped, skipping %s", parent, taskKey)
-					for child := range g.Children[taskKey] {
-						completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+					if g.Tasks[taskKey].ParentRule == AllSuccess {
+						log.Warnf("[~ SKIPPED] parent task %s was skipped, skipping %s", parent, taskKey)
+						for child := range g.Children[taskKey] {
+							completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+						}
+						close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+						return
 					}
-					close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
-					return
 				}
 
 				close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+
 			}
 
 			g.Tasks[taskKey].execute(dagExecutionStartTime, g)
