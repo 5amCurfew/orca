@@ -9,25 +9,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ParentRule string
 type TaskStatus string
 
 const (
-	Pending TaskStatus = "pending"
-	Running TaskStatus = "running"
-	Success TaskStatus = "success"
-	Failed  TaskStatus = "failed"
+	Pending     TaskStatus = "pending"
+	Running     TaskStatus = "running"
+	Success     TaskStatus = "success"
+	Skipped     TaskStatus = "skipped"
+	Failed      TaskStatus = "failed"
+	AllComplete ParentRule = "complete"
+	AllSuccess  ParentRule = "success"
 )
 
 // Task represents a task in the DAG
 type Task struct {
-	Name    string     `json:"name,omitempty"`
-	Desc    string     `json:"desc,omitempty"`
-	Command string     `json:"cmd,omitempty"`
-	Status  TaskStatus `json:"status,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Desc       string     `json:"desc,omitempty"`
+	Command    string     `json:"cmd,omitempty"`
+	ParentRule ParentRule `json:"ParentRule,omitempty"`
+	Status     TaskStatus `json:"status,omitempty"`
 }
 
 // ExecuteTask executes a Task's command
-func (t *Task) execute(dagExecutionStartTime time.Time, completionRelay map[string]chan bool, g *Graph) {
+func (t *Task) execute(dagExecutionStartTime time.Time, g *Graph) {
 	log.Infof("[START] %s task execution started", t.Name)
 
 	cmdParts := []string{"bash", "-c", t.Command}
@@ -44,7 +49,8 @@ func (t *Task) execute(dagExecutionStartTime time.Time, completionRelay map[stri
 		log.Errorf("error creating log output file: %s", err)
 		t.Status = Failed
 		for child := range g.Children[t.Name] {
-			completionRelay[fmt.Sprint(t.Name, "->", child)] <- false
+			completionRelay[fmt.Sprint(t.Name, "->", child)] <- Failed
+			close(completionRelay[fmt.Sprint(t.Name, "->", child)])
 		}
 		return
 	}
@@ -56,13 +62,13 @@ func (t *Task) execute(dagExecutionStartTime time.Time, completionRelay map[stri
 		log.Errorf("[X FAILED] task %s execution failed", t.Name)
 		t.Status = Failed
 		for child := range g.Children[t.Name] {
-			completionRelay[fmt.Sprint(t.Name, "->", child)] <- false
+			completionRelay[fmt.Sprint(t.Name, "->", child)] <- Failed
 		}
 	} else {
 		log.Infof("[\u2714 SUCCESS] %s task execution successful", t.Name)
 		t.Status = Success
 		for child := range g.Children[t.Name] {
-			completionRelay[fmt.Sprint(t.Name, "->", child)] <- true
+			completionRelay[fmt.Sprint(t.Name, "->", child)] <- Success
 		}
 	}
 }

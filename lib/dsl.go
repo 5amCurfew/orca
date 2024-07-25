@@ -74,6 +74,16 @@ func parseTasks(filePath string) (map[string]*Task, error) {
 			fields := strings.Split(line, "=")
 			currentField = "cmd"
 			currentTask.Command = strings.TrimSpace(fields[1])
+		case strings.HasPrefix(line, "ParentRule"):
+			fields := strings.Split(line, "=")
+			currentField = "ParentRule"
+			value := ParentRule(strings.TrimSpace(fields[1]))
+			if value == AllComplete || value == AllSuccess {
+				currentTask.ParentRule = value
+			} else {
+				log.Errorf("invalid dependency rule: %s - defaulting to success", value)
+				currentTask.ParentRule = AllSuccess
+			}
 		case line == "}" && currentTask != nil:
 			tasks[currentTask.Name] = currentTask
 			currentTask = nil

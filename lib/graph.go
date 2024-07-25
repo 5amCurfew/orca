@@ -20,6 +20,9 @@ type Graph struct {
 
 var withTaskFailures = false
 
+// Create a Map of Channels for task completion
+var completionRelay = make(map[string]chan TaskStatus)
+
 // //////////////////////////////
 // Execute DAG
 // //////////////////////////////
@@ -27,13 +30,10 @@ func (g *Graph) Execute() {
 	dagExecutionStartTime := time.Now()
 	log.Printf("[\u2714 DAG START] %s execution started", g.Name)
 
-	// Create a Map of Channels for task completion
-	completionRelay := make(map[string]chan bool)
-
 	// Initialise channel for each task dependency signal
 	for taskKey := range g.Tasks {
 		for parent := range g.Parents[taskKey] {
-			completionRelay[fmt.Sprint(parent, "->", taskKey)] = make(chan bool, 1)
+			completionRelay[fmt.Sprint(parent, "->", taskKey)] = make(chan TaskStatus, 1)
 		}
 	}
 
@@ -46,27 +46,37 @@ func (g *Graph) Execute() {
 		waitGroup.Add(1)
 		g.Tasks[taskKey].Status = Pending
 
-		// Start goroutines that are blocked until all parents have sent successful completion message
-		go func(taskKey string, completionChMap map[string]chan bool) {
+		// Start goroutines that are blocked until all parents have sent completion signal
+		go func(taskKey string) {
 			// Wait for all parents to complete
+			defer waitGroup.Done()
 			for parent := range g.Parents[taskKey] {
-				successSignal := <-completionRelay[fmt.Sprint(parent, "->", taskKey)]
-				if !successSignal {
+				signal := <-completionRelay[fmt.Sprint(parent, "->", taskKey)]
+
+				if signal == Failed {
 					withTaskFailures = true
-					log.Warnf("[~ SKIPPED] parent task %s failed, aborting %s", parent, taskKey)
+					log.Warnf("[~ SKIPPED] parent task %s failed, skipping %s", parent, taskKey)
 					for child := range g.Children[taskKey] {
-						completionRelay[fmt.Sprint(taskKey, "->", child)] <- false
+						completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
 					}
-					close(completionChMap[fmt.Sprint(parent, "->", taskKey)])
-					waitGroup.Done()
+					close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
 					return
 				}
-				close(completionChMap[fmt.Sprint(parent, "->", taskKey)])
+
+				if signal == Skipped {
+					log.Warnf("[~ SKIPPED] parent task %s skipped, skipping %s", parent, taskKey)
+					for child := range g.Children[taskKey] {
+						completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+					}
+					close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+					return
+				}
+
+				close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
 			}
 
-			g.Tasks[taskKey].execute(dagExecutionStartTime, completionChMap, g)
-			waitGroup.Done()
-		}(taskKey, completionRelay)
+			g.Tasks[taskKey].execute(dagExecutionStartTime, g)
+		}(taskKey)
 	}
 
 	// Wait for all tasks to complete before exiting
@@ -76,6 +86,8 @@ func (g *Graph) Execute() {
 	} else {
 		log.Infof("[\u2714 DAG COMPLETE] %s.orca execution successful", g.Name)
 	}
+
+	fmt.Print(completionRelay)
 }
 
 // //////////////////////////////
