@@ -86,8 +86,6 @@ func (g *Graph) Execute() {
 	} else {
 		log.Infof("[\u2714 DAG COMPLETE] %s.orca execution successful", g.Name)
 	}
-
-	fmt.Print(completionRelay)
 }
 
 // //////////////////////////////
