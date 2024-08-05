@@ -49,6 +49,9 @@ var rootCmd = &cobra.Command{
 		var gMap map[string]interface{}
 		_ = json.Unmarshal(jsonData, &gMap)
 
+		//p, _ := json.MarshalIndent(gMap, "", "    ")
+		//fmt.Println(string(p))
+
 		g.Execute()
 	},
 }

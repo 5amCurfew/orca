@@ -10,6 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var g *Graph
+
 // //////////////////////////////
 // Create Graph from File Path
 // //////////////////////////////
@@ -19,7 +21,7 @@ func NewGraph(filePath string) (*Graph, error) {
 		return &Graph{}, errors.New(err.Error())
 	}
 
-	g := &Graph{
+	g = &Graph{
 		File:     filePath,
 		Name:     filePath[:strings.Index(filePath, ".orca")],
 		Tasks:    tasks,

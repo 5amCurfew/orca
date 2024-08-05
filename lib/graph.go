@@ -80,7 +80,7 @@ func (g *Graph) Execute() {
 
 			}
 
-			g.Tasks[taskKey].execute(dagExecutionStartTime, g)
+			g.Tasks[taskKey].execute(dagExecutionStartTime)
 		}(taskKey)
 	}
 

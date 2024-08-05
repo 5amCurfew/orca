@@ -32,7 +32,7 @@ type Task struct {
 }
 
 // ExecuteTask executes a Task's command
-func (t *Task) execute(dagExecutionStartTime time.Time, g *Graph) {
+func (t *Task) execute(dagExecutionStartTime time.Time) {
 	log.Infof("[START] %s task execution started", t.Name)
 
 	cmdParts := []string{"bash", "-c", t.Command}
