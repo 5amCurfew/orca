@@ -1,8 +1,9 @@
 .orca
-example.orca
+dag.yml
 dags/
-logs/
-test*
-orca
-vendor
 dist/
+example.orca
+logs/
+orca
+test*
+vendor

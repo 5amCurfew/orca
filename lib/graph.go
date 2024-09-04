@@ -10,18 +10,18 @@ import (
 
 type DepencyMap map[string]map[string]struct{}
 
+// Create a map of channels for task completion signals
+var taskRelay = make(map[string]chan TaskStatus)
+
 type Graph struct {
-	File     string           `json:"file"`
-	Name     string           `json:"name"`
-	Tasks    map[string]*Task `json:"tasks"`
-	Parents  DepencyMap       `json:"parents"`
-	Children DepencyMap       `json:"children"`
+	File     string           `yml:"file"`
+	Name     string           `yml:"name"`
+	Tasks    map[string]*Task `yml:"tasks"`
+	Parents  DepencyMap       `yml:"parents"`
+	Children DepencyMap       `yml:"children"`
 }
 
 var withTaskFailures = false
-
-// Create a Map of Channels for task completion
-var completionRelay = make(map[string]chan TaskStatus)
 
 // //////////////////////////////
 // Execute DAG
@@ -33,7 +33,7 @@ func (g *Graph) Execute() {
 	// Initialise channel for each task dependency signal
 	for taskKey := range g.Tasks {
 		for parent := range g.Parents[taskKey] {
-			completionRelay[fmt.Sprint(parent, "->", taskKey)] = make(chan TaskStatus, 1)
+			taskRelay[fmt.Sprint(parent, "->", taskKey)] = make(chan TaskStatus, 1)
 		}
 	}
 
@@ -46,21 +46,21 @@ func (g *Graph) Execute() {
 		waitGroup.Add(1)
 		g.Tasks[taskKey].Status = Pending
 
-		// Start goroutines that are blocked until all parents have sent completion signal
+		// Start goroutines that are blocked until all parents of the task have sent completion signal
 		go func(taskKey string) {
 			// Wait for all parents to complete
 			defer waitGroup.Done()
 			for parent := range g.Parents[taskKey] {
-				signal := <-completionRelay[fmt.Sprint(parent, "->", taskKey)]
+				signal := <-taskRelay[fmt.Sprint(parent, "->", taskKey)]
 
 				if signal == Failed {
 					withTaskFailures = true
 					if g.Tasks[taskKey].ParentRule == AllSuccess {
 						log.Warnf("[~ SKIPPED] parent task %s failed, skipping %s", parent, taskKey)
 						for child := range g.Children[taskKey] {
-							completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+							taskRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
 						}
-						close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+						close(taskRelay[fmt.Sprint(parent, "->", taskKey)])
 						return
 					}
 				}
@@ -69,14 +69,14 @@ func (g *Graph) Execute() {
 					if g.Tasks[taskKey].ParentRule == AllSuccess {
 						log.Warnf("[~ SKIPPED] parent task %s was skipped, skipping %s", parent, taskKey)
 						for child := range g.Children[taskKey] {
-							completionRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
+							taskRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
 						}
-						close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+						close(taskRelay[fmt.Sprint(parent, "->", taskKey)])
 						return
 					}
 				}
 
-				close(completionRelay[fmt.Sprint(parent, "->", taskKey)])
+				close(taskRelay[fmt.Sprint(parent, "->", taskKey)])
 
 			}
 
@@ -91,61 +91,4 @@ func (g *Graph) Execute() {
 	} else {
 		log.Infof("[\u2714 DAG COMPLETE] %s.orca execution successful", g.Name)
 	}
-}
-
-// //////////////////////////////
-// Add Dependency Edges to Graph
-// //////////////////////////////
-func (g *Graph) addDependency(child, parent string) error {
-	if child == parent {
-		return fmt.Errorf("self-referential dependency: %s", child)
-	}
-
-	if g.dependsOn(parent, child) {
-		return fmt.Errorf("circular dependency: %s, %s", child, parent)
-	}
-
-	// Add Edges
-	addEdge(g.Parents, child, parent)
-	addEdge(g.Children, parent, child)
-
-	return nil
-}
-
-// //////////////////////////////
-// "Does <CHILD> depend on <PARENT>?"
-// //////////////////////////////
-func (g *Graph) dependsOn(child, parent string) bool {
-	allChildren := make(map[string]struct{})
-	g.findAllChildren(parent, allChildren)
-	_, isDependant := allChildren[child]
-	return isDependant
-}
-
-// //////////////////////////////
-// Find All Dependency Edges (direct and indriect)
-// //////////////////////////////
-func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
-	if _, ok := g.Tasks[parent]; !ok {
-		return
-	}
-
-	for child, nextChild := range g.Children[parent] {
-		if _, ok := children[child]; !ok {
-			children[child] = nextChild
-			g.findAllChildren(child, children)
-		}
-	}
-}
-
-// //////////////////////////////
-// Add Dependency Edge
-// //////////////////////////////
-func addEdge(dm DepencyMap, from, to string) {
-	nodes, ok := dm[from]
-	if !ok {
-		nodes = make(map[string]struct{})
-		dm[from] = nodes
-	}
-	nodes[to] = struct{}{}
 }

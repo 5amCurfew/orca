@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.1.9"
+var version = "0.2.1"
 
 func main() {
 	Execute()
@@ -33,16 +33,16 @@ var rootCmd = &cobra.Command{
 		var cfgPath string
 		if len(args) == 0 {
 			// If no argument provided, look for config.json in the current directory
-			log.Info("[INIT] .orca DAG file path not provided -> defaulting to dag.orca")
-			cfgPath = "dag.orca"
+			log.Info("[INIT] file path not provided -> defaulting to dag.yml")
+			cfgPath = "dag.yml"
 		} else {
 			cfgPath = args[0]
 		}
 
-		g, err := lib.NewGraph(cfgPath)
+		g := &lib.G
+		err := g.Init(cfgPath)
 		if err != nil {
-			log.Errorf("[INIT] %s", err)
-			os.Exit(1)
+			log.Fatalf("Error initialising graph %s: %s", cfgPath, err)
 		}
 
 		jsonData, _ := json.Marshal(g)
