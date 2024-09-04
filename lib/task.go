@@ -40,7 +40,7 @@ func (t *Task) execute(dagExecutionStartTime time.Time) {
 	t.Status = Running
 
 	// Create log directory if it doesn't exist
-	logDir := fmt.Sprintf(".orca/%s/%s", G.Name, dagExecutionStartTime.Format("2006-01-02_15-04-05"))
+	logDir := fmt.Sprintf(".orca/%s", dagExecutionStartTime.Format("2006-01-02_15-04-05"))
 	os.MkdirAll(logDir, os.ModePerm)
 
 	// Create log file
