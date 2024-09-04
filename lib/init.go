@@ -2,7 +2,6 @@ package lib
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -36,7 +35,7 @@ func (g *Graph) Init(filePath string) error {
 		return errors.New(err.Error())
 	}
 
-	dirPath := fmt.Sprintf(".orca/%s", g.Name)
+	dirPath := ".orca"
 	err = os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		log.Errorf("Error creating logs directory: %s\n", err)
@@ -69,11 +68,12 @@ func (g *Graph) parseNodes() error {
 	// Create a map of tasks from the parsed YAML
 	tasks := make(map[string]*Task)
 	for _, task := range taskYaml.Tasks {
-		task.Status = Pending // Initialize status
-		if task.ParentRule == "" {
-			task.ParentRule = AllSuccess // Default parentRule if not set
+		taskCopy := task          // Create a copy of the task
+		taskCopy.Status = Pending // Initialize status
+		if taskCopy.ParentRule == "" {
+			taskCopy.ParentRule = AllSuccess // Default parentRule if not set
 		}
-		tasks[task.Name] = &task
+		tasks[task.Name] = &taskCopy
 	}
 
 	g.Tasks = tasks
