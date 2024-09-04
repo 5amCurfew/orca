@@ -33,8 +33,8 @@ var rootCmd = &cobra.Command{
 		var cfgPath string
 		if len(args) == 0 {
 			// If no argument provided, look for config.json in the current directory
-			log.Info("[INIT] file path not provided -> defaulting to orca.yml")
-			cfgPath = "orca.yml"
+			log.Info("[INIT] file path not provided -> defaulting to dag.yml")
+			cfgPath = "dag.yml"
 		} else {
 			cfgPath = args[0]
 		}
