@@ -28,7 +28,7 @@ var withTaskFailures = false
 // //////////////////////////////
 func (g *Graph) Execute() {
 	dagExecutionStartTime := time.Now()
-	log.Printf("[\u2714 DAG START] %s execution started", g.Name)
+	log.Print("[\u2714 DAG START] execution started")
 
 	// Initialise channel for each task dependency signal
 	for taskKey := range g.Tasks {
@@ -87,8 +87,8 @@ func (g *Graph) Execute() {
 	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
 	if withTaskFailures {
-		log.Warnf("[~ DAG COMPLETE] %s.orca execution completed with failures", g.Name)
+		log.Warnf("[~ DAG COMPLETE] execution completed with failures")
 	} else {
-		log.Infof("[\u2714 DAG COMPLETE] %s.orca execution successful", g.Name)
+		log.Infof("[\u2714 DAG COMPLETE] execution successful")
 	}
 }

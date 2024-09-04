@@ -13,7 +13,7 @@
 - [:pencil: DSL for .orca](#pencil-metadata)
 - [:rocket: Example](#rocket-example)
 
-**v0.2.2**
+**v0.2.3**
 
 ### :computer: Installation
 
@@ -85,7 +85,7 @@ dependencies:
   step-2-2: [step-1]
   step-3: [step-2-2]
   step-4: [step-3]
-  step-5: [step-2-1, step-3]
+  step-5: [step-2-1]
   step-6: [step-4, step-5]
   step-7: [step-5]
   step-8: [step-7]
@@ -94,21 +94,22 @@ dependencies:
 Output:
 
 ```bash
-INFO[2024-09-04T23:16:17+01:00] [✔ DAG START] orca execution started         
-INFO[2024-09-04T23:16:17+01:00] [START] step-1 task execution started        
-INFO[2024-09-04T23:16:18+01:00] [✔ SUCCESS] step-1 task execution successful 
-INFO[2024-09-04T23:16:18+01:00] [START] step-2-2 task execution started      
-INFO[2024-09-04T23:16:18+01:00] [START] step-2-1 task execution started      
-INFO[2024-09-04T23:16:21+01:00] [✔ SUCCESS] step-2-1 task execution successful 
-ERRO[2024-09-04T23:16:21+01:00] [X FAILED] task step-2-2 execution failed    
-INFO[2024-09-04T23:16:21+01:00] [START] step-3 task execution started        
-INFO[2024-09-04T23:16:24+01:00] [✔ SUCCESS] step-3 task execution successful 
-INFO[2024-09-04T23:16:24+01:00] [START] step-4 task execution started        
-INFO[2024-09-04T23:16:24+01:00] [START] step-5 task execution started        
-INFO[2024-09-04T23:16:26+01:00] [✔ SUCCESS] step-4 task execution successful 
-ERRO[2024-09-04T23:16:29+01:00] [X FAILED] task step-5 execution failed      
-WARN[2024-09-04T23:16:29+01:00] [~ SKIPPED] parent task step-5 failed, skipping step-7 
-WARN[2024-09-04T23:16:29+01:00] [~ SKIPPED] parent task step-7 was skipped, skipping step-8 
-WARN[2024-09-04T23:16:29+01:00] [~ SKIPPED] parent task step-5 failed, skipping step-6 
-WARN[2024-09-04T23:16:29+01:00] [~ DAG COMPLETE] orca.orca execution completed with failures 
+INFO[2024-09-04T23:50:31+01:00] [INIT] file path not provided -> defaulting to dag.yml 
+INFO[2024-09-04T23:50:31+01:00] [✔ DAG START] execution started              
+INFO[2024-09-04T23:50:31+01:00] [START] step-1 task execution started        
+INFO[2024-09-04T23:50:32+01:00] [✔ SUCCESS] step-1 task execution successful 
+INFO[2024-09-04T23:50:32+01:00] [START] step-2-2 task execution started      
+INFO[2024-09-04T23:50:32+01:00] [START] step-2-1 task execution started      
+INFO[2024-09-04T23:50:35+01:00] [✔ SUCCESS] step-2-1 task execution successful 
+INFO[2024-09-04T23:50:35+01:00] [START] step-5 task execution started        
+ERRO[2024-09-04T23:50:35+01:00] [X FAILED] task step-2-2 execution failed    
+INFO[2024-09-04T23:50:35+01:00] [START] step-3 task execution started        
+INFO[2024-09-04T23:50:38+01:00] [✔ SUCCESS] step-3 task execution successful 
+INFO[2024-09-04T23:50:38+01:00] [START] step-4 task execution started        
+ERRO[2024-09-04T23:50:40+01:00] [X FAILED] task step-5 execution failed      
+WARN[2024-09-04T23:50:40+01:00] [~ SKIPPED] parent task step-5 failed, skipping step-7 
+WARN[2024-09-04T23:50:40+01:00] [~ SKIPPED] parent task step-7 was skipped, skipping step-8 
+INFO[2024-09-04T23:50:40+01:00] [✔ SUCCESS] step-4 task execution successful 
+WARN[2024-09-04T23:50:40+01:00] [~ SKIPPED] parent task step-5 failed, skipping step-6 
+WARN[2024-09-04T23:50:40+01:00] [~ DAG COMPLETE] execution completed with failures 
 ```
