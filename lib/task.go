@@ -24,11 +24,11 @@ const (
 
 // Task represents a task in the DAG
 type Task struct {
-	Name       string     `json:"name,omitempty"`
-	Desc       string     `json:"desc,omitempty"`
-	Command    string     `json:"cmd,omitempty"`
-	ParentRule ParentRule `json:"ParentRule,omitempty"`
-	Status     TaskStatus `json:"status,omitempty"`
+	Name       string     `yaml:"name"`
+	Desc       string     `yaml:"desc"`
+	Command    string     `yaml:"cmd"`
+	ParentRule ParentRule `yaml:"parentRule"`
+	Status     TaskStatus
 }
 
 // ExecuteTask executes a Task's command
@@ -40,7 +40,7 @@ func (t *Task) execute(dagExecutionStartTime time.Time) {
 	t.Status = Running
 
 	// Create log directory if it doesn't exist
-	logDir := fmt.Sprintf(".orca/%s/%s", g.Name, dagExecutionStartTime.Format("2006-01-02_15-04-05"))
+	logDir := fmt.Sprintf(".orca/%s/%s", G.Name, dagExecutionStartTime.Format("2006-01-02_15-04-05"))
 	os.MkdirAll(logDir, os.ModePerm)
 
 	// Create log file
@@ -48,9 +48,9 @@ func (t *Task) execute(dagExecutionStartTime time.Time) {
 	if err != nil {
 		log.Errorf("error creating log output file: %s", err)
 		t.Status = Failed
-		for child := range g.Children[t.Name] {
-			completionRelay[fmt.Sprint(t.Name, "->", child)] <- Failed
-			close(completionRelay[fmt.Sprint(t.Name, "->", child)])
+		for child := range G.Children[t.Name] {
+			taskRelay[fmt.Sprint(t.Name, "->", child)] <- Failed
+			close(taskRelay[fmt.Sprint(t.Name, "->", child)])
 		}
 		return
 	}
@@ -61,14 +61,14 @@ func (t *Task) execute(dagExecutionStartTime time.Time) {
 	if err := cmd.Run(); err != nil {
 		log.Errorf("[X FAILED] task %s execution failed", t.Name)
 		t.Status = Failed
-		for child := range g.Children[t.Name] {
-			completionRelay[fmt.Sprint(t.Name, "->", child)] <- Failed
+		for child := range G.Children[t.Name] {
+			taskRelay[fmt.Sprint(t.Name, "->", child)] <- Failed
 		}
 	} else {
 		log.Infof("[\u2714 SUCCESS] %s task execution successful", t.Name)
 		t.Status = Success
-		for child := range g.Children[t.Name] {
-			completionRelay[fmt.Sprint(t.Name, "->", child)] <- Success
+		for child := range G.Children[t.Name] {
+			taskRelay[fmt.Sprint(t.Name, "->", child)] <- Success
 		}
 	}
 }

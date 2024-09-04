@@ -1,0 +1,47 @@
+tasks:
+  - name: step-1
+    desc: start the DAG
+    cmd: sleep 1 && echo "DAG started!"
+  
+  - name: step-2-1
+    desc: do something for this task
+    cmd: sleep 3 && echo "Step 2.1"
+  
+  - name: step-2-2
+    desc: do something that will fail!
+    cmd: sleep 3 && cd into_a_directory_that_does_not_exist
+
+  - name: step-3
+    desc: do something for this task that is not skipped if a parent fails
+    cmd: sleep 3 && echo "Step 3"
+    parentRule: complete
+  
+  - name: step-4
+    desc: do something for this task
+    cmd: sleep 2 && echo "Step 4"
+  
+  - name: step-5
+    desc: do something that will fail!
+    cmd: sleep 5 && cd into_a_directory_that_does_not_exist
+
+  - name: step-6
+    desc: do something for this task
+    cmd: sleep 2 && echo "Step 6"
+  
+  - name: step-7
+    desc: do something for this task that will skip if a parent fails
+    cmd: sleep 4 && echo "Step 7"
+  
+  - name: step-8
+    desc: do something for this task
+    cmd: sleep 1 && echo "Step 8"
+
+dependencies:
+  step-2-1: [step-1]
+  step-2-2: [step-1]
+  step-3: [step-2-2]
+  step-4: [step-3]
+  step-5: [step-2-1, step-3]
+  step-6: [step-4, step-5]
+  step-7: [step-5]
+  step-8: [step-7]
