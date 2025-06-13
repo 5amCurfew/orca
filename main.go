@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.2.3"
+var version = "0.3.0"
 
 func main() {
 	Execute()
@@ -27,7 +27,7 @@ var rootCmd = &cobra.Command{
 		log.SetFormatter(&log.TextFormatter{
 			ForceColors:     true,
 			FullTimestamp:   true,
-			TimestampFormat: time.RFC3339,
+			TimestampFormat: time.RFC3339Nano,
 		})
 
 		var cfgPath string

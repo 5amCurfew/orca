@@ -13,9 +13,7 @@ import (
 // Create Graph
 var G Graph
 
-// //////////////////////////////
 // Initalise Graph
-// //////////////////////////////
 func (g *Graph) Init(filePath string) error {
 	var err error
 
@@ -44,9 +42,7 @@ func (g *Graph) Init(filePath string) error {
 	return nil
 }
 
-// //////////////////////////////
-// Parse Nodes from File
-// //////////////////////////////
+// Parse nodes from file
 func (g *Graph) parseNodes() error {
 	graphYML, err := os.ReadFile(g.File)
 	if err != nil {
@@ -81,9 +77,7 @@ func (g *Graph) parseNodes() error {
 	return nil
 }
 
-// //////////////////////////////
-// Parse Edges from File
-// //////////////////////////////
+// Parse edges from File
 func (g *Graph) parseEdges() error {
 	// Open and read the YAML file
 	graphYML, err := os.ReadFile(g.File)

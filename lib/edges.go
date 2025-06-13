@@ -2,9 +2,7 @@ package lib
 
 import "fmt"
 
-// //////////////////////////////
-// Add Dependency Edges to Graph
-// //////////////////////////////
+// Add edges to Graph
 func (g *Graph) addDependency(child, parent string) error {
 	if child == parent {
 		return fmt.Errorf("self-referential dependency: %s", child)
@@ -21,9 +19,7 @@ func (g *Graph) addDependency(child, parent string) error {
 	return nil
 }
 
-// //////////////////////////////
-// "Does <CHILD> depend on <PARENT>?"
-// //////////////////////////////
+// True if child node depends on parent node (either directly or indirectly)
 func (g *Graph) dependsOn(child, parent string) bool {
 	allChildren := make(map[string]struct{})
 	g.findAllChildren(parent, allChildren)
@@ -31,9 +27,7 @@ func (g *Graph) dependsOn(child, parent string) bool {
 	return isDependant
 }
 
-// //////////////////////////////
 // Find All Dependency Edges (direct and indriect)
-// //////////////////////////////
 func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
 	if _, ok := g.Tasks[parent]; !ok {
 		return
@@ -47,9 +41,7 @@ func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
 	}
 }
 
-// //////////////////////////////
-// Add Dependency Edge
-// //////////////////////////////
+// Add edge
 func addEdge(dm DepencyMap, from, to string) {
 	nodes, ok := dm[from]
 	if !ok {

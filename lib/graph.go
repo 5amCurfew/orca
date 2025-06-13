@@ -10,7 +10,7 @@ import (
 
 type DepencyMap map[string]map[string]struct{}
 
-// Create a map of channels for task completion signals
+// Create a map of channels for node task completion signals
 var taskRelay = make(map[string]chan TaskStatus)
 
 type Graph struct {
@@ -23,72 +23,67 @@ type Graph struct {
 
 var withTaskFailures = false
 
-// //////////////////////////////
-// Execute DAG
-// //////////////////////////////
+// Execute directed acyclic graph
 func (g *Graph) Execute() {
 	dagExecutionStartTime := time.Now()
 	log.Print("[\u2714 DAG START] execution started")
 
-	// Initialise channel for each task dependency signal
+	// Initialise channels for task dependencies
 	for taskKey := range g.Tasks {
 		for parent := range g.Parents[taskKey] {
-			taskRelay[fmt.Sprint(parent, "->", taskKey)] = make(chan TaskStatus, 1)
+			relayKey := edgeKey(parent, taskKey)
+			taskRelay[relayKey] = make(chan TaskStatus, 1)
 		}
 	}
 
-	// Use a WaitGroup to wait for all tasks to complete
 	var waitGroup sync.WaitGroup
-
-	// Create & Start goroutines for each task
 	for taskKey := range g.Tasks {
-		// Increment the wait group
 		waitGroup.Add(1)
 		g.Tasks[taskKey].Status = Pending
 
-		// Start goroutines that are blocked until all parents of the task have sent completion signal
 		go func(taskKey string) {
-			// Wait for all parents to complete
 			defer waitGroup.Done()
-			for parent := range g.Parents[taskKey] {
-				signal := <-taskRelay[fmt.Sprint(parent, "->", taskKey)]
 
-				if signal == Failed {
-					withTaskFailures = true
-					if g.Tasks[taskKey].ParentRule == AllSuccess {
-						log.Warnf("[~ SKIPPED] parent task %s failed, skipping %s", parent, taskKey)
-						for child := range g.Children[taskKey] {
-							taskRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
-						}
-						close(taskRelay[fmt.Sprint(parent, "->", taskKey)])
-						return
-					}
-				}
-
-				if signal == Skipped {
-					if g.Tasks[taskKey].ParentRule == AllSuccess {
-						log.Warnf("[~ SKIPPED] parent task %s was skipped, skipping %s", parent, taskKey)
-						for child := range g.Children[taskKey] {
-							taskRelay[fmt.Sprint(taskKey, "->", child)] <- Skipped
-						}
-						close(taskRelay[fmt.Sprint(parent, "->", taskKey)])
-						return
-					}
-				}
-
-				close(taskRelay[fmt.Sprint(parent, "->", taskKey)])
-
+			if !g.waitForParents(taskKey) {
+				g.skipTaskAndNotifyChildren(taskKey)
+				return
 			}
 
 			g.Tasks[taskKey].execute(dagExecutionStartTime)
 		}(taskKey)
 	}
 
-	// Wait for all tasks to complete before exiting
 	waitGroup.Wait()
 	if withTaskFailures {
 		log.Warnf("[~ DAG COMPLETE] execution completed with failures")
 	} else {
 		log.Infof("[\u2714 DAG COMPLETE] execution successful")
+	}
+}
+
+func edgeKey(from, to string) string {
+	return fmt.Sprintf("%s->%s", from, to)
+}
+
+// Wait for parent tasks to complete
+func (g *Graph) waitForParents(taskKey string) bool {
+	for parent := range g.Parents[taskKey] {
+		signal := <-taskRelay[edgeKey(parent, taskKey)]
+
+		if signal == Failed || signal == Skipped {
+			withTaskFailures = withTaskFailures || signal == Failed
+
+			if g.Tasks[taskKey].ParentRule == AllSuccess {
+				log.Warnf("[~ SKIPPED] parent task %s status %s, skipping %s", parent, signal, taskKey)
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (g *Graph) skipTaskAndNotifyChildren(taskKey string) {
+	for child := range g.Children[taskKey] {
+		taskRelay[edgeKey(taskKey, child)] <- Skipped
 	}
 }
