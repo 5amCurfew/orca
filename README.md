@@ -13,7 +13,7 @@
 - [:pencil: DSL for .orca](#pencil-metadata)
 - [:rocket: Example](#rocket-example)
 
-**v0.3.0**
+**v0.4.0**
 
 ### :computer: Installation
 
@@ -104,9 +104,9 @@ step-2-2             ❌ Failed      23:59:51.0370   23:59:54.0484
 step-3               ✅ Success     23:59:54.0486   23:59:57.0607  
 step-4               ✅ Success     23:59:57.0608   23:59:59.0734  
 step-5               ❌ Failed      23:59:54.0487   23:59:59.0607  
-step-6               ⚠️  Skipped     -               23:59:59.0736  
-step-7               ⚠️  Skipped     -               23:59:59.0608  
-step-8               ⚠️  Skipped     -               23:59:59.0609  
+step-6               ⚠️ Skipped     -               23:59:59.0736  
+step-7               ⚠️ Skipped     -               23:59:59.0608  
+step-8               ⚠️ Skipped     -               23:59:59.0609  
 
 [⚠️  DAG COMPLETE] execution completed with failures
 ```
