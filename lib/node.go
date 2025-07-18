@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ParentRule string
@@ -33,12 +31,11 @@ type Task struct {
 
 // execute a Node Task command
 func (t *Task) execute(startTime time.Time) {
-	log.Infof("[START] %s task execution started", t.Name)
 	t.Status = Running
+	G.StatusChannel <- TaskStatusMsg{TaskKey: t.Name, Status: Running}
 
 	logFile, err := t.createLogFile(startTime)
 	if err != nil {
-		log.Errorf("error creating log file for task %s: %v", t.Name, err)
 		t.fail()
 		return
 	}
@@ -49,10 +46,8 @@ func (t *Task) execute(startTime time.Time) {
 	cmd.Stderr = logFile
 
 	if err := cmd.Run(); err != nil {
-		log.Errorf("[X FAILED] task %s execution failed: %v", t.Name, err)
 		t.fail()
 	} else {
-		log.Infof("[\u2714 SUCCESS] %s task execution successful", t.Name)
 		t.succeed()
 	}
 }
@@ -77,8 +72,13 @@ func (t *Task) succeed() {
 
 func (t *Task) notifyChildren(status TaskStatus) {
 	for child := range G.Children[t.Name] {
-		key := edgeKey(t.Name, child)
-		taskRelay[key] <- status
-		close(taskRelay[key])
+		notifyWG.Add(1)
+		go func(child string) {
+			defer notifyWG.Done()
+			key := edgeKey(t.Name, child)
+			taskRelay[key] <- status
+			G.StatusChannel <- TaskStatusMsg{TaskKey: t.Name, Status: status}
+			close(taskRelay[key])
+		}(child)
 	}
 }
