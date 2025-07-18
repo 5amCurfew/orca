@@ -3,6 +3,7 @@ package lib
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -16,6 +17,19 @@ var G Graph
 // Initalise Graph
 func (g *Graph) Init(filePath string) error {
 	var err error
+
+	// Check if the dag file exists before proceeding
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return errors.New("file does not exist: " + filePath)
+	}
+
+	// Check that the file has a .yml extension
+	if !strings.HasSuffix(filePath, ".yml") {
+		return errors.New("file must be a valid yaml file: " + filePath)
+	}
+
+	g.File = filePath
+	g.Name = strings.TrimSuffix(filepath.Base(filePath), ".yml")
 
 	g.File = filePath
 	g.Name = filePath[:strings.Index(filePath, ".yml")]
