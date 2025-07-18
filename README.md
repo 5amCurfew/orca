@@ -94,22 +94,19 @@ dependencies:
 Output:
 
 ```bash
-INFO[2024-09-04T23:50:31+01:00] [INIT] file path not provided -> defaulting to dag.yml 
-INFO[2024-09-04T23:50:31+01:00] [✔ DAG START] execution started              
-INFO[2024-09-04T23:50:31+01:00] [START] step-1 task execution started        
-INFO[2024-09-04T23:50:32+01:00] [✔ SUCCESS] step-1 task execution successful 
-INFO[2024-09-04T23:50:32+01:00] [START] step-2-2 task execution started      
-INFO[2024-09-04T23:50:32+01:00] [START] step-2-1 task execution started      
-INFO[2024-09-04T23:50:35+01:00] [✔ SUCCESS] step-2-1 task execution successful 
-INFO[2024-09-04T23:50:35+01:00] [START] step-5 task execution started        
-ERRO[2024-09-04T23:50:35+01:00] [X FAILED] task step-2-2 execution failed    
-INFO[2024-09-04T23:50:35+01:00] [START] step-3 task execution started        
-INFO[2024-09-04T23:50:38+01:00] [✔ SUCCESS] step-3 task execution successful 
-INFO[2024-09-04T23:50:38+01:00] [START] step-4 task execution started        
-ERRO[2024-09-04T23:50:40+01:00] [X FAILED] task step-5 execution failed      
-WARN[2024-09-04T23:50:40+01:00] [~ SKIPPED] parent task step-5 failed, skipping step-7 
-WARN[2024-09-04T23:50:40+01:00] [~ SKIPPED] parent task step-7 was skipped, skipping step-8 
-INFO[2024-09-04T23:50:40+01:00] [✔ SUCCESS] step-4 task execution successful 
-WARN[2024-09-04T23:50:40+01:00] [~ SKIPPED] parent task step-5 failed, skipping step-6 
-WARN[2024-09-04T23:50:40+01:00] [~ DAG COMPLETE] execution completed with failures 
+[🚀 DAG START] executing tasks...
+
+Task                 Status       Started         Ended          
+-----------------------------------------------------------------
+step-1               ✅ Success     23:59:50.0298   23:59:51.0366  
+step-2-1             ✅ Success     23:59:51.0368   23:59:54.0486  
+step-2-2             ❌ Failed      23:59:51.0370   23:59:54.0484  
+step-3               ✅ Success     23:59:54.0486   23:59:57.0607  
+step-4               ✅ Success     23:59:57.0608   23:59:59.0734  
+step-5               ❌ Failed      23:59:54.0487   23:59:59.0607  
+step-6               ⚠️  Skipped     -               23:59:59.0736  
+step-7               ⚠️  Skipped     -               23:59:59.0608  
+step-8               ⚠️  Skipped     -               23:59:59.0609  
+
+[⚠️  DAG COMPLETE] execution completed with failures
 ```

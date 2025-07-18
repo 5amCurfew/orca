@@ -37,6 +37,8 @@ func (g *Graph) Execute() {
 
 	// Forward status messages to Bubble Tea
 	go func() {
+		prog.Send(DagStartMsg{Message: "[🚀 DAG START] executing tasks...\n"})
+
 		for msg := range g.StatusChannel {
 			prog.Send(msg)
 		}
@@ -76,9 +78,9 @@ func (g *Graph) Execute() {
 		prog.Send(DagCompleteMsg{})
 		var completeMsg string
 		if withTaskFailures {
-			completeMsg = "[⚠️  DAG COMPLETE] execution completed with failures"
+			completeMsg = "[⚠️  DAG COMPLETE] execution completed with failures\n"
 		} else {
-			completeMsg = "[✅ DAG COMPLETE] execution successful"
+			completeMsg = "[✅ DAG COMPLETE] execution successful\n"
 		}
 		prog.Send(DagCompleteMsg{Message: completeMsg})
 	}()

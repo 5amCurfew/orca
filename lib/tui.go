@@ -15,6 +15,10 @@ type TaskStatusMsg struct {
 	Status  TaskStatus
 }
 
+type DagStartMsg struct {
+	Message string
+}
+
 type DagCompleteMsg struct {
 	Message string
 }
@@ -24,6 +28,7 @@ type DagModel struct {
 	TaskOrder      []string
 	TaskStartTimes map[string]time.Time
 	TaskEndTimes   map[string]time.Time
+	StartMsg       string
 	CompleteMsg    string
 	SpinnerFrame   int
 }
@@ -57,6 +62,8 @@ func (m *DagModel) Init() tea.Cmd {
 
 func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case DagStartMsg:
+		m.StartMsg = msg.Message
 	case tickMsg:
 		m.SpinnerFrame = (m.SpinnerFrame + 1) % len(spinnerFrames)
 		return m, tea.Tick(time.Millisecond*120, func(time.Time) tea.Msg { return tickMsg{} })
@@ -85,6 +92,10 @@ func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *DagModel) View() string {
 	var b strings.Builder
+	if m.StartMsg != "" {
+		fmt.Fprintf(&b, "\n%s\n", m.StartMsg)
+	}
+
 	fmt.Fprintf(&b, "%-20s %-12s %-15s %-15s\n", "Task", "Status", "Started", "Ended")
 	fmt.Fprintf(&b, "%s\n", strings.Repeat("-", 65))
 	for _, k := range m.TaskOrder {
