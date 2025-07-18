@@ -31,4 +31,4 @@ jobs:
           version: ${{ env.GITHUB_REF_NAME }}
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.ORCA_RELEASE_TOKEN  }}
+          GITHUB_TOKEN: ${{ secrets.ORCA_RELEASE_TOKEN }}
