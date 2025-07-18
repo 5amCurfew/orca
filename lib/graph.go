@@ -75,7 +75,6 @@ func (g *Graph) Execute() {
 		close(g.StatusChannel) // Close when done
 
 		// Signal TUI to quit
-		prog.Send(DagCompleteMsg{})
 		var completeMsg string
 		if withTaskFailures {
 			completeMsg = "[⚠️  DAG COMPLETE] execution completed with failures\n"
