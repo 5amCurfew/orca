@@ -13,7 +13,7 @@
 - [:pencil: DSL for .orca](#pencil-metadata)
 - [:rocket: Example](#rocket-example)
 
-**v0.4.3**
+**v0.4.4**
 
 ### :computer: Installation
 
@@ -87,7 +87,7 @@ dependencies:
   step-4: [step-3]
   step-5: [step-2-1]
   step-6: [step-4, step-5]
-  step-7: [step-5]
+  step-7: [step-4]
   step-8: [step-7]
 ```
 
@@ -96,17 +96,17 @@ Output:
 ```bash
 [🚀 DAG START] executing tasks...
 
-Task                 Status       Started         Ended          
------------------------------------------------------------------
-step-1               ✅ Success     23:59:50.0298   23:59:51.0366  
-step-2-1             ✅ Success     23:59:51.0368   23:59:54.0486  
-step-2-2             ❌ Failed      23:59:51.0370   23:59:54.0484  
-step-3               ✅ Success     23:59:54.0486   23:59:57.0607  
-step-4               ✅ Success     23:59:57.0608   23:59:59.0734  
-step-5               ❌ Failed      23:59:54.0487   23:59:59.0607  
-step-6               ⚠️ Skipped     -               23:59:59.0736  
-step-7               ⚠️ Skipped     -               23:59:59.0608  
-step-8               ⚠️ Skipped     -               23:59:59.0609  
+Task                 Status       Pid        Started         Ended          
+---------------------------------------------------------------------------
+step-1               [✓] Success  15804      18:49:39.8366   18:49:40.8449  
+step-2-1             [✓] Success  15807      18:49:40.8452   18:49:43.8539  
+step-2-2             [X] Failed   15806      18:49:40.8451   18:49:43.8538  
+step-3               [✓] Success  15814      18:49:43.8541   18:49:46.8636  
+step-4               [✓] Success  15825      18:49:46.8639   18:49:48.8733  
+step-5               [X] Failed   15815      18:49:43.8540   18:49:48.8650  
+step-6               [-] Skipped  -          -               18:49:48.8735  
+step-7               [✓] Success  15828      18:49:48.8736   18:49:52.8814  
+step-8               [✓] Success  15838      18:49:52.8816   18:49:53.8891  
 
 [⚠️  DAG COMPLETE] execution completed with failures
 ```
