@@ -27,6 +27,7 @@ type Task struct {
 	Command    string     `yaml:"cmd"`
 	ParentRule ParentRule `yaml:"parentRule"`
 	Status     TaskStatus
+	Pid        int
 }
 
 // execute a Node Task command
@@ -45,7 +46,18 @@ func (t *Task) execute(startTime time.Time) {
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 
-	if err := cmd.Run(); err != nil {
+	// Start the process first
+	if err := cmd.Start(); err != nil {
+		t.fail()
+		return
+	}
+
+	// Now we can safely get the PID
+	t.Pid = cmd.Process.Pid
+	G.StatusChannel <- TaskStatusMsg{TaskKey: t.Name, Status: Running, Pid: t.Pid}
+
+	// Wait for completion
+	if err := cmd.Wait(); err != nil {
 		t.fail()
 	} else {
 		t.succeed()
@@ -62,22 +74,33 @@ func (t *Task) createLogFile(startTime time.Time) (*os.File, error) {
 
 func (t *Task) fail() {
 	t.Status = Failed
-	t.notifyChildren(Failed)
+	// Send final status update
+	G.StatusChannel <- TaskStatusMsg{
+		TaskKey: t.Name,
+		Status:  Failed,
+		Pid:     t.Pid,
+	}
+	t.notifyChildren()
 }
 
 func (t *Task) succeed() {
 	t.Status = Success
-	t.notifyChildren(Success)
+	// Send final status update
+	G.StatusChannel <- TaskStatusMsg{
+		TaskKey: t.Name,
+		Status:  Success,
+		Pid:     t.Pid,
+	}
+	t.notifyChildren()
 }
 
-func (t *Task) notifyChildren(status TaskStatus) {
+func (t *Task) notifyChildren() {
 	for child := range G.Children[t.Name] {
 		notifyWG.Add(1)
 		go func(child string) {
 			defer notifyWG.Done()
 			key := edgeKey(t.Name, child)
-			taskRelay[key] <- status
-			G.StatusChannel <- TaskStatusMsg{TaskKey: t.Name, Status: status}
+			taskRelay[key] <- t.Status
 			close(taskRelay[key])
 		}(child)
 	}

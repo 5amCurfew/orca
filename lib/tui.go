@@ -13,6 +13,7 @@ import (
 type TaskStatusMsg struct {
 	TaskKey string
 	Status  TaskStatus
+	Pid     int
 }
 
 type DagStartMsg struct {
@@ -28,6 +29,7 @@ type DagModel struct {
 	TaskOrder      []string
 	TaskStartTimes map[string]time.Time
 	TaskEndTimes   map[string]time.Time
+	TaskPids       map[string]int
 	StartMsg       string
 	CompleteMsg    string
 	SpinnerFrame   int
@@ -40,8 +42,6 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 func NewDagModel(G *Graph) *DagModel {
 	tasks := make(map[string]TaskStatus)
 	order := make([]string, 0, len(G.Tasks))
-	startTimes := make(map[string]time.Time)
-	endTimes := make(map[string]time.Time)
 	for k := range G.Tasks {
 		tasks[k] = Pending
 		order = append(order, k)
@@ -51,8 +51,9 @@ func NewDagModel(G *Graph) *DagModel {
 	return &DagModel{
 		Tasks:          tasks,
 		TaskOrder:      order,
-		TaskStartTimes: startTimes,
-		TaskEndTimes:   endTimes,
+		TaskStartTimes: make(map[string]time.Time),
+		TaskEndTimes:   make(map[string]time.Time),
+		TaskPids:       make(map[string]int),
 	}
 }
 
@@ -72,6 +73,9 @@ func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if _, exists := m.TaskStartTimes[msg.TaskKey]; !exists {
 				m.TaskStartTimes[msg.TaskKey] = time.Now()
 			}
+		}
+		if msg.Pid > 0 {
+			m.TaskPids[msg.TaskKey] = msg.Pid
 		}
 		if msg.Status == Success || msg.Status == Skipped || msg.Status == Failed {
 			if _, exists := m.TaskEndTimes[msg.TaskKey]; !exists {
@@ -96,39 +100,52 @@ func (m *DagModel) View() string {
 		fmt.Fprintf(&b, "\n%s\n", m.StartMsg)
 	}
 
-	fmt.Fprintf(&b, "%-20s %-12s %-15s %-15s\n", "Task", "Status", "Started", "Ended")
-	fmt.Fprintf(&b, "%s\n", strings.Repeat("-", 65))
+	fmt.Fprintf(&b, "%-20s %-12s %-10s %-15s %-15s\n", "Task", "Status", "Pid", "Started", "Ended")
+
+	fmt.Fprintf(&b, "%s\n", strings.Repeat("-", 75))
 	for _, k := range m.TaskOrder {
 		v := m.Tasks[k]
 		status := ""
 		switch v {
 		case Pending:
-			status = "⏳ Pending"
+			status = "[ ] Pending "
 		case Running:
-			status = fmt.Sprintf("%s Running", spinnerFrames[m.SpinnerFrame])
+			status = fmt.Sprintf(" %s  Running ", spinnerFrames[m.SpinnerFrame])
 		case Success:
-			status = "✅ Success"
+			status = "[✓] Success "
 		case Failed:
-			status = "❌ Failed"
+			status = "[X] Failed "
 		case Skipped:
-			status = "⚠️  Skipped"
+			status = "[-] Skipped "
 		}
-		status = runewidth.FillRight(status, 14)
+		status = runewidth.FillRight(status, 12)
+
+		pid := "-"
+		if p, ok := m.TaskPids[k]; ok && p > 0 {
+			pid = fmt.Sprintf("%d", p)
+			pid = runewidth.FillRight(pid, 10)
+		} else {
+			pid = runewidth.FillRight("-", 10)
+		}
 
 		startTimestamp := ""
 		if t, ok := m.TaskStartTimes[k]; ok {
 			startTimestamp = t.Format("15:04:05.0000")
+			startTimestamp = runewidth.FillRight(startTimestamp, 15)
 		} else {
 			startTimestamp = runewidth.FillRight("-", 15)
 		}
+
 		endTimestamp := ""
 		if t, ok := m.TaskEndTimes[k]; ok {
 			endTimestamp = t.Format("15:04:05.0000")
+			endTimestamp = runewidth.FillRight(endTimestamp, 15)
 		} else {
 			endTimestamp = runewidth.FillRight("-", 15)
 		}
 
-		fmt.Fprintf(&b, "%-20s %-12s %-15s %-15s\n", k, status, startTimestamp, endTimestamp)
+		fmt.Fprintf(&b, "%-20s %-12s %-8s %-15s %-15s\n",
+			k, status, pid, startTimestamp, endTimestamp)
 	}
 	if m.CompleteMsg != "" {
 		fmt.Fprintf(&b, "\n%s\n", m.CompleteMsg)

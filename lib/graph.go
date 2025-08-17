@@ -34,6 +34,7 @@ func (g *Graph) Execute() {
 	model := NewDagModel(g)
 	prog := tea.NewProgram(model)
 	g.StatusChannel = make(chan TaskStatusMsg, len(g.Tasks)*2)
+	done := make(chan struct{}) // Add a done channel for synchronization
 
 	// Forward status messages to Bubble Tea
 	go func() {
@@ -42,6 +43,7 @@ func (g *Graph) Execute() {
 		for msg := range g.StatusChannel {
 			prog.Send(msg)
 		}
+		done <- struct{}{} // Signal that all messages have been processed
 	}()
 
 	// Orchestrate tasks in a goroutine
@@ -72,7 +74,13 @@ func (g *Graph) Execute() {
 		}
 
 		waitGroup.Wait()
+		notifyWG.Wait()
+
 		close(g.StatusChannel) // Close when done
+		<-done                 // Wait for all messages to be processed
+
+		prog.Send(tickMsg{}) // Send a tick to ensure final updates are rendered
+		time.Sleep(50 * time.Millisecond)
 
 		// Signal TUI to quit
 		var completeMsg string
