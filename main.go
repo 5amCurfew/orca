@@ -29,7 +29,7 @@ var rootCmd = &cobra.Command{
 			cfgPath = args[0]
 		}
 
-		err := lib.G.Init(cfgPath)
+		err := lib.Init(cfgPath)
 		if err != nil {
 			log.Fatalf("Error initialising graph %s: %s", cfgPath, err)
 		}

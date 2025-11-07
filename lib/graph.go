@@ -2,11 +2,16 @@ package lib
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"gopkg.in/yaml.v2"
 )
+
+// Create Global Graph
+var G Graph
 
 type DepencyMap map[string]map[string]struct{}
 
@@ -27,7 +32,9 @@ type Graph struct {
 
 var withTaskFailures = false
 
-// Execute directed acyclic graph
+// ////////////////////////////////////////
+// Graph Execution Function
+// ////////////////////////////////////////
 func (g *Graph) Execute() {
 	dagExecutionStartTime := time.Now()
 
@@ -131,10 +138,126 @@ func (g *Graph) skipTaskAndNotifyChildren(nodeKey string) {
 }
 
 // ////////////////////////////////////////
+// Graph construction functions
+// ////////////////////////////////////////
+
+// Parse nodes from file
+func (g *Graph) parseNodes() error {
+	graphYML, err := os.ReadFile(g.File)
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal YAML data into NodeYaml struct
+	var nodeYaml NodeYaml
+	err = yaml.Unmarshal(graphYML, &nodeYaml)
+	if err != nil {
+		return err
+	}
+
+	// Create a map of Nodes from the parsed YAML
+	Nodes := make(map[string]*Node)
+	for _, Node := range nodeYaml.Nodes {
+		NodeCopy := Node          // Create a copy of the Node
+		NodeCopy.Status = Pending // Initialize status
+		if NodeCopy.ParentRule == "" {
+			NodeCopy.ParentRule = AllSuccess // Default parentRule if not set
+		}
+		Nodes[Node.Name] = &NodeCopy
+	}
+
+	g.Nodes = Nodes
+
+	return nil
+}
+
+// Parse edges from File
+func (g *Graph) parseEdges() error {
+	// Open and read the YAML file
+	graphYML, err := os.ReadFile(g.File)
+	if err != nil {
+		return err
+	}
+
+	// Define structure to match YAML format
+	type DependencyYaml struct {
+		Dependencies map[string][]string `yaml:"dependencies"`
+	}
+
+	// Unmarshal YAML data into DependencyYaml struct
+	var dependencyYaml DependencyYaml
+	err = yaml.Unmarshal(graphYML, &dependencyYaml)
+	if err != nil {
+		return err
+	}
+
+	// Loop through the dependencies and add them to the graph
+	for Node, parents := range dependencyYaml.Dependencies {
+		for _, parent := range parents {
+			err := g.addDependency(Node, parent)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// Add edge to Graph
+func (g *Graph) addDependency(child, parent string) error {
+	if child == parent {
+		return fmt.Errorf("self-referential dependency: %s", child)
+	}
+
+	if g.dependsOn(parent, child) {
+		return fmt.Errorf("circular dependency: %s, %s", child, parent)
+	}
+
+	// Add Edges
+	addEdge(g.Parents, child, parent)
+	addEdge(g.Children, parent, child)
+
+	return nil
+}
+
+// True if child node depends on parent node (either directly or indirectly)
+func (g *Graph) dependsOn(child, parent string) bool {
+	allChildren := make(map[string]struct{})
+	g.findAllChildren(parent, allChildren)
+	_, isDependant := allChildren[child]
+	return isDependant
+}
+
+// Find All Dependency Edges (direct and indriect)
+func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
+	if _, ok := g.Nodes[parent]; !ok {
+		return
+	}
+
+	for child, nextChild := range g.Children[parent] {
+		if _, ok := children[child]; !ok {
+			children[child] = nextChild
+			g.findAllChildren(child, children)
+		}
+	}
+}
+
+// ////////////////////////////////////////
 // Utility Functions
 // ////////////////////////////////////////
 
 // Generate edge key
 func edgeKey(from, to string) string {
 	return fmt.Sprintf("%s->%s", from, to)
+}
+
+// Add edge
+func addEdge(dm DepencyMap, from, to string) {
+	nodes, ok := dm[from]
+	if !ok {
+		nodes = make(map[string]struct{})
+		dm[from] = nodes
+	}
+	nodes[to] = struct{}{}
 }
