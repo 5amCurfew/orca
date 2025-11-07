@@ -33,7 +33,7 @@ func (g *Graph) Init(filePath string) error {
 
 	g.File = filePath
 	g.Name = filePath[:strings.Index(filePath, ".yml")]
-	g.Tasks = make(map[string]*Task)
+	g.Nodes = make(map[string]*Node)
 	g.Parents = make(DepencyMap)
 	g.Children = make(DepencyMap)
 
@@ -63,30 +63,25 @@ func (g *Graph) parseNodes() error {
 		return err
 	}
 
-	// Define structure to match YAML format
-	type TaskYaml struct {
-		Tasks []Task `yaml:"tasks"`
-	}
-
-	// Unmarshal YAML data into TaskYaml struct
-	var taskYaml TaskYaml
-	err = yaml.Unmarshal(graphYML, &taskYaml)
+	// Unmarshal YAML data into NodeYaml struct
+	var nodeYaml NodeYaml
+	err = yaml.Unmarshal(graphYML, &nodeYaml)
 	if err != nil {
 		return err
 	}
 
-	// Create a map of tasks from the parsed YAML
-	tasks := make(map[string]*Task)
-	for _, task := range taskYaml.Tasks {
-		taskCopy := task          // Create a copy of the task
-		taskCopy.Status = Pending // Initialize status
-		if taskCopy.ParentRule == "" {
-			taskCopy.ParentRule = AllSuccess // Default parentRule if not set
+	// Create a map of Nodes from the parsed YAML
+	Nodes := make(map[string]*Node)
+	for _, Node := range nodeYaml.Nodes {
+		NodeCopy := Node          // Create a copy of the Node
+		NodeCopy.Status = Pending // Initialize status
+		if NodeCopy.ParentRule == "" {
+			NodeCopy.ParentRule = AllSuccess // Default parentRule if not set
 		}
-		tasks[task.Name] = &taskCopy
+		Nodes[Node.Name] = &NodeCopy
 	}
 
-	g.Tasks = tasks
+	g.Nodes = Nodes
 
 	return nil
 }
@@ -112,9 +107,9 @@ func (g *Graph) parseEdges() error {
 	}
 
 	// Loop through the dependencies and add them to the graph
-	for task, parents := range dependencyYaml.Dependencies {
+	for Node, parents := range dependencyYaml.Dependencies {
 		for _, parent := range parents {
-			err := g.addDependency(task, parent)
+			err := g.addDependency(Node, parent)
 			if err != nil {
 				return err
 			}

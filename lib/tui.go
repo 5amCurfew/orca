@@ -10,9 +10,9 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-type TaskStatusMsg struct {
-	TaskKey string
-	Status  TaskStatus
+type NodeStatusMsg struct {
+	NodeKey string
+	Status  NodeStatus
 	Pid     int
 }
 
@@ -25,11 +25,11 @@ type DagCompleteMsg struct {
 }
 
 type DagModel struct {
-	Tasks          map[string]TaskStatus
-	TaskOrder      []string
-	TaskStartTimes map[string]time.Time
-	TaskEndTimes   map[string]time.Time
-	TaskPids       map[string]int
+	Nodes          map[string]NodeStatus
+	NodeOrder      []string
+	NodeStartTimes map[string]time.Time
+	NodeEndTimes   map[string]time.Time
+	NodePids       map[string]int
 	StartMsg       string
 	CompleteMsg    string
 	SpinnerFrame   int
@@ -40,20 +40,20 @@ type tickMsg struct{}
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 func NewDagModel(G *Graph) *DagModel {
-	tasks := make(map[string]TaskStatus)
-	order := make([]string, 0, len(G.Tasks))
-	for k := range G.Tasks {
-		tasks[k] = Pending
+	Nodes := make(map[string]NodeStatus)
+	order := make([]string, 0, len(G.Nodes))
+	for k := range G.Nodes {
+		Nodes[k] = Pending
 		order = append(order, k)
 	}
 
 	slices.Sort(order)
 	return &DagModel{
-		Tasks:          tasks,
-		TaskOrder:      order,
-		TaskStartTimes: make(map[string]time.Time),
-		TaskEndTimes:   make(map[string]time.Time),
-		TaskPids:       make(map[string]int),
+		Nodes:          Nodes,
+		NodeOrder:      order,
+		NodeStartTimes: make(map[string]time.Time),
+		NodeEndTimes:   make(map[string]time.Time),
+		NodePids:       make(map[string]int),
 	}
 }
 
@@ -68,21 +68,21 @@ func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.SpinnerFrame = (m.SpinnerFrame + 1) % len(spinnerFrames)
 		return m, tea.Tick(time.Millisecond*120, func(time.Time) tea.Msg { return tickMsg{} })
-	case TaskStatusMsg:
+	case NodeStatusMsg:
 		if msg.Status == Running {
-			if _, exists := m.TaskStartTimes[msg.TaskKey]; !exists {
-				m.TaskStartTimes[msg.TaskKey] = time.Now()
+			if _, exists := m.NodeStartTimes[msg.NodeKey]; !exists {
+				m.NodeStartTimes[msg.NodeKey] = time.Now()
 			}
 		}
 		if msg.Pid > 0 {
-			m.TaskPids[msg.TaskKey] = msg.Pid
+			m.NodePids[msg.NodeKey] = msg.Pid
 		}
 		if msg.Status == Success || msg.Status == Skipped || msg.Status == Failed {
-			if _, exists := m.TaskEndTimes[msg.TaskKey]; !exists {
-				m.TaskEndTimes[msg.TaskKey] = time.Now()
+			if _, exists := m.NodeEndTimes[msg.NodeKey]; !exists {
+				m.NodeEndTimes[msg.NodeKey] = time.Now()
 			}
 		}
-		m.Tasks[msg.TaskKey] = msg.Status
+		m.Nodes[msg.NodeKey] = msg.Status
 	case DagCompleteMsg:
 		m.CompleteMsg = msg.Message
 		return m, tea.Quit
@@ -100,11 +100,11 @@ func (m *DagModel) View() string {
 		fmt.Fprintf(&b, "\n%s\n", m.StartMsg)
 	}
 
-	fmt.Fprintf(&b, "%-20s %-12s %-10s %-15s %-15s\n", "Task", "Status", "Pid", "Started", "Ended")
+	fmt.Fprintf(&b, "%-20s %-12s %-10s %-15s %-15s\n", "Node", "Status", "Pid", "Started", "Ended")
 
 	fmt.Fprintf(&b, "%s\n", strings.Repeat("-", 75))
-	for _, k := range m.TaskOrder {
-		v := m.Tasks[k]
+	for _, k := range m.NodeOrder {
+		v := m.Nodes[k]
 		status := ""
 		switch v {
 		case Pending:
@@ -121,7 +121,7 @@ func (m *DagModel) View() string {
 		status = runewidth.FillRight(status, 12)
 
 		pid := "-"
-		if p, ok := m.TaskPids[k]; ok && p > 0 {
+		if p, ok := m.NodePids[k]; ok && p > 0 {
 			pid = fmt.Sprintf("%d", p)
 			pid = runewidth.FillRight(pid, 10)
 		} else {
@@ -129,7 +129,7 @@ func (m *DagModel) View() string {
 		}
 
 		startTimestamp := ""
-		if t, ok := m.TaskStartTimes[k]; ok {
+		if t, ok := m.NodeStartTimes[k]; ok {
 			startTimestamp = t.Format("15:04:05.0000")
 			startTimestamp = runewidth.FillRight(startTimestamp, 15)
 		} else {
@@ -137,7 +137,7 @@ func (m *DagModel) View() string {
 		}
 
 		endTimestamp := ""
-		if t, ok := m.TaskEndTimes[k]; ok {
+		if t, ok := m.NodeEndTimes[k]; ok {
 			endTimestamp = t.Format("15:04:05.0000")
 			endTimestamp = runewidth.FillRight(endTimestamp, 15)
 		} else {
@@ -151,16 +151,4 @@ func (m *DagModel) View() string {
 		fmt.Fprintf(&b, "\n%s\n", m.CompleteMsg)
 	}
 	return b.String()
-}
-
-// Helper to center a string in a field of given width
-func centerString(s string, width int) string {
-	displayWidth := runewidth.StringWidth(s)
-	padding := width - displayWidth
-	if padding <= 0 {
-		return s
-	}
-	left := padding / 2
-	right := padding - left
-	return fmt.Sprintf("%s%s%s", strings.Repeat(" ", left), s, strings.Repeat(" ", right))
 }

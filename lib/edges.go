@@ -29,7 +29,7 @@ func (g *Graph) dependsOn(child, parent string) bool {
 
 // Find All Dependency Edges (direct and indriect)
 func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
-	if _, ok := g.Tasks[parent]; !ok {
+	if _, ok := g.Nodes[parent]; !ok {
 		return
 	}
 

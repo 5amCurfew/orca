@@ -8,32 +8,37 @@ import (
 )
 
 type ParentRule string
-type TaskStatus string
+type NodeStatus string
 
 const (
-	Pending     TaskStatus = "pending"
-	Running     TaskStatus = "running"
-	Success     TaskStatus = "success"
-	Skipped     TaskStatus = "skipped"
-	Failed      TaskStatus = "failed"
+	Pending     NodeStatus = "pending"
+	Running     NodeStatus = "running"
+	Success     NodeStatus = "success"
+	Skipped     NodeStatus = "skipped"
+	Failed      NodeStatus = "failed"
 	AllComplete ParentRule = "complete"
 	AllSuccess  ParentRule = "success"
 )
 
-// Task represents a task in the DAG
-type Task struct {
+// Node represents a Node in the DAG
+type Node struct {
 	Name       string     `yaml:"name"`
 	Desc       string     `yaml:"desc"`
 	Command    string     `yaml:"cmd"`
 	ParentRule ParentRule `yaml:"parentRule"`
-	Status     TaskStatus
+	Status     NodeStatus
 	Pid        int
 }
 
-// execute a Node Task command
-func (t *Task) execute(startTime time.Time) {
+// Define structure to match YAML format
+type NodeYaml struct {
+	Nodes []Node `yaml:"nodes"`
+}
+
+// execute a Node command
+func (t *Node) execute(startTime time.Time) {
 	t.Status = Running
-	G.StatusChannel <- TaskStatusMsg{TaskKey: t.Name, Status: Running}
+	G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: Running}
 
 	logFile, err := t.createLogFile(startTime)
 	if err != nil {
@@ -54,7 +59,7 @@ func (t *Task) execute(startTime time.Time) {
 
 	// Now we can safely get the PID
 	t.Pid = cmd.Process.Pid
-	G.StatusChannel <- TaskStatusMsg{TaskKey: t.Name, Status: Running, Pid: t.Pid}
+	G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: Running, Pid: t.Pid}
 
 	// Wait for completion
 	if err := cmd.Wait(); err != nil {
@@ -64,7 +69,7 @@ func (t *Task) execute(startTime time.Time) {
 	}
 }
 
-func (t *Task) createLogFile(startTime time.Time) (*os.File, error) {
+func (t *Node) createLogFile(startTime time.Time) (*os.File, error) {
 	logDir := fmt.Sprintf(".orca/%s", startTime.Format("2006-01-02_15-04-05"))
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		return nil, err
@@ -72,36 +77,36 @@ func (t *Task) createLogFile(startTime time.Time) (*os.File, error) {
 	return os.Create(fmt.Sprintf("%s/%s.log", logDir, t.Name))
 }
 
-func (t *Task) fail() {
+func (t *Node) fail() {
 	t.Status = Failed
 	// Send final status update
-	G.StatusChannel <- TaskStatusMsg{
-		TaskKey: t.Name,
+	G.StatusChannel <- NodeStatusMsg{
+		NodeKey: t.Name,
 		Status:  Failed,
 		Pid:     t.Pid,
 	}
 	t.notifyChildren()
 }
 
-func (t *Task) succeed() {
+func (t *Node) succeed() {
 	t.Status = Success
 	// Send final status update
-	G.StatusChannel <- TaskStatusMsg{
-		TaskKey: t.Name,
+	G.StatusChannel <- NodeStatusMsg{
+		NodeKey: t.Name,
 		Status:  Success,
 		Pid:     t.Pid,
 	}
 	t.notifyChildren()
 }
 
-func (t *Task) notifyChildren() {
+func (t *Node) notifyChildren() {
 	for child := range G.Children[t.Name] {
 		notifyWG.Add(1)
 		go func(child string) {
 			defer notifyWG.Done()
 			key := edgeKey(t.Name, child)
-			taskRelay[key] <- t.Status
-			close(taskRelay[key])
+			NodeRelay[key] <- t.Status
+			close(NodeRelay[key])
 		}(child)
 	}
 }

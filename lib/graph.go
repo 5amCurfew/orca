@@ -14,15 +14,15 @@ var waitGroup sync.WaitGroup
 var notifyWG sync.WaitGroup
 
 // Create a map of channels for node task completion signals
-var taskRelay = make(map[string]chan TaskStatus)
+var NodeRelay = make(map[string]chan NodeStatus)
 
 type Graph struct {
 	File          string           `yml:"file"`
 	Name          string           `yml:"name"`
-	Tasks         map[string]*Task `yml:"tasks"`
+	Nodes         map[string]*Node `yml:"nodes"`
 	Parents       DepencyMap       `yml:"parents"`
 	Children      DepencyMap       `yml:"children"`
-	StatusChannel chan TaskStatusMsg
+	StatusChannel chan NodeStatusMsg
 }
 
 var withTaskFailures = false
@@ -33,10 +33,12 @@ func (g *Graph) Execute() {
 
 	model := NewDagModel(g)
 	prog := tea.NewProgram(model)
-	g.StatusChannel = make(chan TaskStatusMsg, len(g.Tasks)*2)
+	g.StatusChannel = make(chan NodeStatusMsg, len(g.Nodes)*2)
 	done := make(chan struct{}) // Add a done channel for synchronization
 
+	// ////////////////////////////////////////
 	// Forward status messages to Bubble Tea
+	// ////////////////////////////////////////
 	go func() {
 		prog.Send(DagStartMsg{Message: "[🚀 DAG START] executing tasks...\n"})
 
@@ -46,31 +48,35 @@ func (g *Graph) Execute() {
 		done <- struct{}{} // Signal that all messages have been processed
 	}()
 
-	// Orchestrate tasks in a goroutine
-	go func() {
-		// Initialise channels for task dependencies
-		for taskKey := range g.Tasks {
-			for parent := range g.Parents[taskKey] {
-				relayKey := edgeKey(parent, taskKey)
-				taskRelay[relayKey] = make(chan TaskStatus, 1)
-			}
+	// ////////////////////////////////////////
+	// Initialise channels for task dependencies
+	// ////////////////////////////////////////
+	for nodeKey := range g.Nodes {
+		for parent := range g.Parents[nodeKey] {
+			relayKey := edgeKey(parent, nodeKey)
+			NodeRelay[relayKey] = make(chan NodeStatus, 1)
 		}
+	}
 
-		for taskKey := range g.Tasks {
+	// ////////////////////////////////////////
+	// Orchestrate tasks in a goroutine
+	// ////////////////////////////////////////
+	go func() {
+		for nodeKey := range g.Nodes {
 			waitGroup.Add(1)
-			g.Tasks[taskKey].Status = Pending
-			g.StatusChannel <- TaskStatusMsg{TaskKey: taskKey, Status: Pending}
+			g.Nodes[nodeKey].Status = Pending
+			g.StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Pending}
 
-			go func(taskKey string) {
+			go func(nodeKey string) {
 				defer waitGroup.Done()
 
-				if !g.waitForParents(taskKey) {
-					g.skipTaskAndNotifyChildren(taskKey)
+				if !g.waitForParents(nodeKey) {
+					g.skipTaskAndNotifyChildren(nodeKey)
 					return
 				}
 
-				g.Tasks[taskKey].execute(dagExecutionStartTime)
-			}(taskKey)
+				g.Nodes[nodeKey].execute(dagExecutionStartTime)
+			}(nodeKey)
 		}
 
 		waitGroup.Wait()
@@ -92,25 +98,23 @@ func (g *Graph) Execute() {
 		prog.Send(DagCompleteMsg{Message: completeMsg})
 	}()
 
+	// ////////////////////////////////////////
 	// Run the TUI (this blocks until the program exits)
+	// ////////////////////////////////////////
 	if _, err := prog.Run(); err != nil {
 		fmt.Println("Error running TUI:", err)
 	}
 }
 
-func edgeKey(from, to string) string {
-	return fmt.Sprintf("%s->%s", from, to)
-}
-
 // Wait for parent tasks to complete
-func (g *Graph) waitForParents(taskKey string) bool {
-	for parent := range g.Parents[taskKey] {
-		signal := <-taskRelay[edgeKey(parent, taskKey)]
+func (g *Graph) waitForParents(nodeKey string) bool {
+	for parent := range g.Parents[nodeKey] {
+		signal := <-NodeRelay[edgeKey(parent, nodeKey)]
 
 		if signal == Failed || signal == Skipped {
 			withTaskFailures = withTaskFailures || signal == Failed
 
-			if g.Tasks[taskKey].ParentRule == AllSuccess {
+			if g.Nodes[nodeKey].ParentRule == AllSuccess {
 				return false
 			}
 		}
@@ -118,9 +122,19 @@ func (g *Graph) waitForParents(taskKey string) bool {
 	return true
 }
 
-func (g *Graph) skipTaskAndNotifyChildren(taskKey string) {
-	g.StatusChannel <- TaskStatusMsg{TaskKey: taskKey, Status: Skipped}
-	for child := range g.Children[taskKey] {
-		taskRelay[edgeKey(taskKey, child)] <- Skipped
+// Skip task and notify children
+func (g *Graph) skipTaskAndNotifyChildren(nodeKey string) {
+	g.StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Skipped}
+	for child := range g.Children[nodeKey] {
+		NodeRelay[edgeKey(nodeKey, child)] <- Skipped
 	}
+}
+
+// ////////////////////////////////////////
+// Utility Functions
+// ////////////////////////////////////////
+
+// Generate edge key
+func edgeKey(from, to string) string {
+	return fmt.Sprintf("%s->%s", from, to)
 }
