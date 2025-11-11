@@ -158,11 +158,18 @@ func (g *Graph) parseNodes() error {
 	// Create a map of Nodes from the parsed YAML
 	Nodes := make(map[string]*Node)
 	for _, Node := range nodeYaml.Nodes {
-		NodeCopy := Node          // Create a copy of the Node
-		NodeCopy.Status = Pending // Initialize status
+		NodeCopy := Node // Create a copy of the Node
+		NodeCopy.Status = Pending
 		if NodeCopy.ParentRule == "" {
 			NodeCopy.ParentRule = AllSuccess // Default parentRule if not set
 		}
+
+		if NodeCopy.Retries > 0 && NodeCopy.RetryDelay == 0 {
+			NodeCopy.RetryDelay = 10 // Default retry delay if retries are set but delay is not
+		} else if NodeCopy.Retries == 0 {
+			NodeCopy.RetryDelay = 0 // No retry delay if no retries
+		}
+
 		Nodes[Node.Name] = &NodeCopy
 	}
 

@@ -10,7 +10,7 @@
 `orca` is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph
 
 - [:computer: Installation](#computer-installation)
-- [:pencil: DSL for .orca](#pencil-metadata)
+- [:pencil: DSL for .orca](#pencil-dsl-for-orca)
 - [:rocket: Example](#rocket-example)
 
 **v0.4.4**
@@ -36,13 +36,13 @@ Flags:
 
 DAGs are defined in `yml` files in the relative path directory.
 
-To define a tasks, use the `tasks` sequence, defining a name, description (`desc`) and `bash` command (`cmd`) per task. Note that `name` must be unique for desired behaviour. The `parentRule` (optional) is one of either `success` (default) that only executes the task if **all parents complete successfully** or `complete` that will execute the task when **all parents have completed (regardless of success or failure)**.
+To define a tasks, use the `nodes` sequence, defining a name, description (`desc`) and `bash` command (`cmd`), `retries` (optional) and `retryDelay` (optional) per task. Note that `name` must be unique for desired behaviour. The `parentRule` (optional) is one of either `success` (default) that only executes the task if **all parents complete successfully** or `complete` that will execute the task when **all parents have completed (regardless of success or failure)**.
 
 Dependencies are defined using the `dependencies` mapping with `<CHILD>: [<PARENT_1>, <PARENT_2>, ...]` syntax.
 
 ### :rocket: Example
 ```yml
-tasks:
+nodes:
   - name: step-1
     desc: start the DAG
     cmd: sleep 1 && echo "DAG started!"
@@ -54,6 +54,8 @@ tasks:
   - name: step-2-2
     desc: do something that will fail!
     cmd: sleep 3 && cd into_a_directory_that_does_not_exist
+    retries: 2
+    retryDelay: 5
 
   - name: step-3
     desc: do something for this task that is not skipped if a parent fails
@@ -96,17 +98,18 @@ Output:
 ```bash
 [🚀 DAG START] executing tasks...
 
-Task                 Status       Pid        Started         Ended          
----------------------------------------------------------------------------
-step-1               [✓] Success  15804      18:49:39.8366   18:49:40.8449  
-step-2-1             [✓] Success  15807      18:49:40.8452   18:49:43.8539  
-step-2-2             [X] Failed   15806      18:49:40.8451   18:49:43.8538  
-step-3               [✓] Success  15814      18:49:43.8541   18:49:46.8636  
-step-4               [✓] Success  15825      18:49:46.8639   18:49:48.8733  
-step-5               [X] Failed   15815      18:49:43.8540   18:49:48.8650  
-step-6               [-] Skipped  -          -               18:49:48.8735  
-step-7               [✓] Success  15828      18:49:48.8736   18:49:52.8814  
-step-8               [✓] Success  15838      18:49:52.8816   18:49:53.8891  
+Node                 Status       Pid        Attempt    Started         Ended          
+-------------------------------------------------------------------------------------
+step-1               [✓] Success  14924      1/1        22:21:33.1958   22:21:34.2003  
+step-2-1             [✓] Success  14927      1/1        22:21:34.2025   22:21:37.2097  
+step-2-2             [X] Failed   14958      3/3        22:21:50.2217   22:21:53.2292  
+step-3               [✓] Success  14966      1/1        22:21:53.2315   22:21:56.2404  
+step-4               [✓] Success  14971      1/1        22:21:56.2428   22:21:58.2521  
+step-5               [X] Failed   14936      1/1        22:21:37.2117   22:21:42.2194  
+step-6               [-] Skipped  -                     -               22:21:58.2524  
+step-7               [✓] Success  14976      1/1        22:21:58.2545   22:22:02.2621  
+step-8               [✓] Success  14988      1/1        22:22:02.2645   22:22:03.2716  
 
 [⚠️  DAG COMPLETE] execution completed with failures
+
 ```

@@ -14,6 +14,7 @@ type NodeStatusMsg struct {
 	NodeKey string
 	Status  NodeStatus
 	Pid     int
+	Attempt string
 }
 
 type DagStartMsg struct {
@@ -30,6 +31,7 @@ type DagModel struct {
 	NodeStartTimes map[string]time.Time
 	NodeEndTimes   map[string]time.Time
 	NodePids       map[string]int
+	NodeAttempts   map[string]string
 	StartMsg       string
 	CompleteMsg    string
 	SpinnerFrame   int
@@ -54,6 +56,7 @@ func NewDagModel(G *Graph) *DagModel {
 		NodeStartTimes: make(map[string]time.Time),
 		NodeEndTimes:   make(map[string]time.Time),
 		NodePids:       make(map[string]int),
+		NodeAttempts:   make(map[string]string),
 	}
 }
 
@@ -70,9 +73,7 @@ func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Tick(time.Millisecond*120, func(time.Time) tea.Msg { return tickMsg{} })
 	case NodeStatusMsg:
 		if msg.Status == Running {
-			if _, exists := m.NodeStartTimes[msg.NodeKey]; !exists {
-				m.NodeStartTimes[msg.NodeKey] = time.Now()
-			}
+			m.NodeStartTimes[msg.NodeKey] = time.Now()
 		}
 		if msg.Pid > 0 {
 			m.NodePids[msg.NodeKey] = msg.Pid
@@ -83,6 +84,7 @@ func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.Nodes[msg.NodeKey] = msg.Status
+		m.NodeAttempts[msg.NodeKey] = msg.Attempt
 	case DagCompleteMsg:
 		m.CompleteMsg = msg.Message
 		return m, tea.Quit
@@ -100,9 +102,13 @@ func (m *DagModel) View() string {
 		fmt.Fprintf(&b, "\n%s\n", m.StartMsg)
 	}
 
-	fmt.Fprintf(&b, "%-20s %-12s %-10s %-15s %-15s\n", "Node", "Status", "Pid", "Started", "Ended")
+	fmt.Fprintf(
+		&b,
+		"%-20s %-12s %-10s %-10s %-15s %-15s\n",
+		"Node", "Status", "Pid", "Attempt", "Started", "Ended",
+	)
 
-	fmt.Fprintf(&b, "%s\n", strings.Repeat("-", 75))
+	fmt.Fprintf(&b, "%s\n", strings.Repeat("-", 85))
 	for _, k := range m.NodeOrder {
 		v := m.Nodes[k]
 		status := ""
@@ -120,8 +126,14 @@ func (m *DagModel) View() string {
 		}
 		status = runewidth.FillRight(status, 12)
 
+		attempt := "-"
+		if a, ok := m.NodeAttempts[k]; ok {
+			a = runewidth.FillRight(a, 10)
+			attempt = a
+		}
+
 		pid := "-"
-		if p, ok := m.NodePids[k]; ok && p > 0 {
+		if p, ok := m.NodePids[k]; ok && p > 0 && v != Pending {
 			pid = fmt.Sprintf("%d", p)
 			pid = runewidth.FillRight(pid, 10)
 		} else {
@@ -144,11 +156,16 @@ func (m *DagModel) View() string {
 			endTimestamp = runewidth.FillRight("-", 15)
 		}
 
-		fmt.Fprintf(&b, "%-20s %-12s %-8s %-15s %-15s\n",
-			k, status, pid, startTimestamp, endTimestamp)
+		fmt.Fprintf(
+			&b,
+			"%-20s %-12s %-10s %-10s %-15s %-15s\n",
+			k, status, pid, attempt, startTimestamp, endTimestamp,
+		)
 	}
+
 	if m.CompleteMsg != "" {
 		fmt.Fprintf(&b, "\n%s\n", m.CompleteMsg)
 	}
+
 	return b.String()
 }

@@ -2,6 +2,8 @@ package lib
 
 import (
 	"fmt"
+	"log"
+	"math"
 	"os"
 	"os/exec"
 	"time"
@@ -26,6 +28,8 @@ type Node struct {
 	Desc       string     `yaml:"desc"`
 	Command    string     `yaml:"cmd"`
 	ParentRule ParentRule `yaml:"parentRule"`
+	Retries    int        `yaml:"retries"`
+	RetryDelay int        `yaml:"retryDelay"`
 	Status     NodeStatus
 	Pid        int
 }
@@ -37,44 +41,57 @@ type NodeYaml struct {
 
 // execute a Node command
 func (t *Node) execute(startTime time.Time) {
-	t.Status = Running
-	G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: Running}
+	var logFile *os.File
+	var err error
 
-	logFile, err := t.createLogFile(startTime)
-	if err != nil {
-		t.fail()
-		return
+	for attempt := 1; attempt <= int(math.Max(1, float64(t.Retries+1))); attempt++ {
+		if attempt > 1 {
+			t.Status = Pending
+			G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: t.Status, Attempt: fmt.Sprintf("%d/%d", attempt-1, t.Retries+1)}
+			if t.RetryDelay > 0 {
+				time.Sleep(time.Duration(t.RetryDelay) * time.Second)
+			}
+		}
+
+		logFile, err = t.createLogFile(startTime, attempt)
+		if err != nil {
+			t.fail()
+			return
+		}
+
+		cmd := exec.Command("bash", "-c", t.Command)
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+
+		t.Status = Running
+		if err := cmd.Start(); err != nil {
+			log.Printf("Error starting command for node %s: %v\n", t.Name, err)
+			logFile.Close()
+			continue
+		}
+
+		t.Pid = cmd.Process.Pid
+		G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: t.Status, Pid: t.Pid, Attempt: fmt.Sprintf("%d/%d", attempt, t.Retries+1)}
+
+		err = cmd.Wait()
+		logFile.Close()
+
+		if err == nil {
+			t.succeed(attempt)
+			return
+		}
 	}
-	defer logFile.Close()
 
-	cmd := exec.Command("bash", "-c", t.Command)
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
-
-	// Start the process first
-	if err := cmd.Start(); err != nil {
-		t.fail()
-		return
-	}
-
-	// Now we can safely get the PID
-	t.Pid = cmd.Process.Pid
-	G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: Running, Pid: t.Pid}
-
-	// Wait for completion
-	if err := cmd.Wait(); err != nil {
-		t.fail()
-	} else {
-		t.succeed()
-	}
+	// If we reached here, all retries failed
+	t.fail()
 }
 
-func (t *Node) createLogFile(startTime time.Time) (*os.File, error) {
+func (t *Node) createLogFile(startTime time.Time, attempt int) (*os.File, error) {
 	logDir := fmt.Sprintf(".orca/%s", startTime.Format("2006-01-02_15-04-05"))
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	return os.Create(fmt.Sprintf("%s/%s.log", logDir, t.Name))
+	return os.Create(fmt.Sprintf("%s/%s_%d.log", logDir, t.Name, attempt))
 }
 
 func (t *Node) fail() {
@@ -84,17 +101,19 @@ func (t *Node) fail() {
 		NodeKey: t.Name,
 		Status:  Failed,
 		Pid:     t.Pid,
+		Attempt: fmt.Sprintf("%d/%d", t.Retries+1, t.Retries+1),
 	}
 	t.notifyChildren()
 }
 
-func (t *Node) succeed() {
+func (t *Node) succeed(attempt int) {
 	t.Status = Success
 	// Send final status update
 	G.StatusChannel <- NodeStatusMsg{
 		NodeKey: t.Name,
 		Status:  Success,
 		Pid:     t.Pid,
+		Attempt: fmt.Sprintf("%d/%d", attempt, t.Retries+1),
 	}
 	t.notifyChildren()
 }
