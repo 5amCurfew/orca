@@ -61,7 +61,7 @@ func NewDagModel(G *Graph) *DagModel {
 }
 
 func (m *DagModel) Init() tea.Cmd {
-	return tea.Tick(time.Millisecond*120, func(time.Time) tea.Msg { return tickMsg{} })
+	return tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return tickMsg{} })
 }
 
 func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -70,7 +70,7 @@ func (m *DagModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.StartMsg = msg.Message
 	case tickMsg:
 		m.SpinnerFrame = (m.SpinnerFrame + 1) % len(spinnerFrames)
-		return m, tea.Tick(time.Millisecond*120, func(time.Time) tea.Msg { return tickMsg{} })
+		return m, tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return tickMsg{} })
 	case NodeStatusMsg:
 		if msg.Status == Running {
 			m.NodeStartTimes[msg.NodeKey] = time.Now()
