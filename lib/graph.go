@@ -15,19 +15,19 @@ var G Graph
 
 type DepencyMap map[string]map[string]struct{}
 
-var waitGroup sync.WaitGroup
+var relayWG sync.WaitGroup
 var notifyWG sync.WaitGroup
+var statusWG sync.WaitGroup
 
 // Create a map of channels for node task completion signals
 var NodeRelay = make(map[string]chan NodeStatus)
 
 type Graph struct {
-	File          string           `yml:"file"`
-	Name          string           `yml:"name"`
-	Nodes         map[string]*Node `yml:"nodes"`
-	Parents       DepencyMap       `yml:"parents"`
-	Children      DepencyMap       `yml:"children"`
-	StatusChannel chan NodeStatusMsg
+	File     string           `yml:"file"`
+	Name     string           `yml:"name"`
+	Nodes    map[string]*Node `yml:"nodes"`
+	Parents  DepencyMap       `yml:"parents"`
+	Children DepencyMap       `yml:"children"`
 }
 
 var withTaskFailures = false
@@ -40,19 +40,37 @@ func (g *Graph) Execute() {
 
 	model := NewDagModel(g)
 	prog := tea.NewProgram(model)
-	g.StatusChannel = make(chan NodeStatusMsg, len(g.Nodes)*2)
-	done := make(chan struct{}) // Add a done channel for synchronization
+
+	// runFinished receives the Run result when the TUI exits
+	runFinished := make(chan error, 1)
+	go func() {
+		// Run blocks until the UI quits; run it in a goroutine so we can continue.
+		_, err := prog.Run()
+		runFinished <- err
+	}()
+
+	done := make(chan struct{})
 
 	// ////////////////////////////////////////
 	// Forward status messages to Bubble Tea
 	// ////////////////////////////////////////
-	go func() {
-		prog.Send(DagStartMsg{Message: "[🚀 DAG START] executing tasks...\n"})
+	// Send DAG start message
+	prog.Send(DagStartMsg{Message: "[🚀 DAG START] executing tasks...\n"})
 
-		for msg := range g.StatusChannel {
-			prog.Send(msg)
-		}
-		done <- struct{}{} // Signal that all messages have been processed
+	for _, node := range g.Nodes {
+		statusWG.Add(1)
+		go func(n *Node) {
+			defer statusWG.Done()
+			for msg := range n.StatusChannel {
+				prog.Send(msg) // Bubble Tea receives directly
+			}
+		}(node)
+	}
+
+	// Close done when all node consumers status messages have been processed
+	go func() {
+		statusWG.Wait()
+		done <- struct{}{}
 	}()
 
 	// ////////////////////////////////////////
@@ -70,12 +88,13 @@ func (g *Graph) Execute() {
 	// ////////////////////////////////////////
 	go func() {
 		for nodeKey := range g.Nodes {
-			waitGroup.Add(1)
+			relayWG.Add(1)
 			g.Nodes[nodeKey].Status = Pending
-			g.StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Pending}
+			g.Nodes[nodeKey].StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Pending}
 
 			go func(nodeKey string) {
-				defer waitGroup.Done()
+				defer close(g.Nodes[nodeKey].StatusChannel)
+				defer relayWG.Done()
 
 				if !g.waitForParents(nodeKey) {
 					g.skipTaskAndNotifyChildren(nodeKey)
@@ -86,11 +105,10 @@ func (g *Graph) Execute() {
 			}(nodeKey)
 		}
 
-		waitGroup.Wait()
+		relayWG.Wait()
 		notifyWG.Wait()
 
-		close(g.StatusChannel) // Close when done
-		<-done                 // Wait for all messages to be processed
+		<-done // Wait for all messages to be processed
 
 		prog.Send(tickMsg{}) // Send a tick to ensure final updates are rendered
 		time.Sleep(50 * time.Millisecond)
@@ -108,7 +126,8 @@ func (g *Graph) Execute() {
 	// ////////////////////////////////////////
 	// Run the TUI (this blocks until the program exits)
 	// ////////////////////////////////////////
-	if _, err := prog.Run(); err != nil {
+	// Wait for the TUI to finish before returning from Execute()
+	if err := <-runFinished; err != nil {
 		fmt.Println("Error running TUI:", err)
 	}
 }
@@ -131,7 +150,7 @@ func (g *Graph) waitForParents(nodeKey string) bool {
 
 // Skip task and notify children
 func (g *Graph) skipTaskAndNotifyChildren(nodeKey string) {
-	g.StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Skipped}
+	g.Nodes[nodeKey].StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Skipped}
 	for child := range g.Children[nodeKey] {
 		NodeRelay[edgeKey(nodeKey, child)] <- Skipped
 	}

@@ -32,6 +32,8 @@ type Node struct {
 	RetryDelay int        `yaml:"retryDelay"`
 	Status     NodeStatus
 	Pid        int
+
+	StatusChannel chan NodeStatusMsg // per-node channel
 }
 
 // Define structure to match YAML format
@@ -47,7 +49,7 @@ func (t *Node) execute(startTime time.Time) {
 	for attempt := 1; attempt <= int(math.Max(1, float64(t.Retries+1))); attempt++ {
 		if attempt > 1 {
 			t.Status = Pending
-			G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: t.Status, Attempt: fmt.Sprintf("%d/%d", attempt-1, t.Retries+1)}
+			t.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: t.Status, Attempt: fmt.Sprintf("%d/%d", attempt-1, t.Retries+1)}
 			if t.RetryDelay > 0 {
 				time.Sleep(time.Duration(t.RetryDelay) * time.Second)
 			}
@@ -71,7 +73,7 @@ func (t *Node) execute(startTime time.Time) {
 		}
 
 		t.Pid = cmd.Process.Pid
-		G.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: t.Status, Pid: t.Pid, Attempt: fmt.Sprintf("%d/%d", attempt, t.Retries+1)}
+		t.StatusChannel <- NodeStatusMsg{NodeKey: t.Name, Status: t.Status, Pid: t.Pid, Attempt: fmt.Sprintf("%d/%d", attempt, t.Retries+1)}
 
 		err = cmd.Wait()
 		logFile.Close()
@@ -84,6 +86,7 @@ func (t *Node) execute(startTime time.Time) {
 
 	// If we reached here, all retries failed
 	t.fail()
+	close(t.StatusChannel)
 }
 
 func (t *Node) createLogFile(startTime time.Time, attempt int) (*os.File, error) {
@@ -97,7 +100,7 @@ func (t *Node) createLogFile(startTime time.Time, attempt int) (*os.File, error)
 func (t *Node) fail() {
 	t.Status = Failed
 	// Send final status update
-	G.StatusChannel <- NodeStatusMsg{
+	t.StatusChannel <- NodeStatusMsg{
 		NodeKey: t.Name,
 		Status:  Failed,
 		Pid:     t.Pid,
@@ -109,7 +112,7 @@ func (t *Node) fail() {
 func (t *Node) succeed(attempt int) {
 	t.Status = Success
 	// Send final status update
-	G.StatusChannel <- NodeStatusMsg{
+	t.StatusChannel <- NodeStatusMsg{
 		NodeKey: t.Name,
 		Status:  Success,
 		Pid:     t.Pid,
