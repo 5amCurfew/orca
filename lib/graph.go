@@ -3,206 +3,106 @@ package lib
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
-// Create Global Graph
-var G Graph
+// DependencyMap is an adjacency set mapping a node name to the set of node names it is connected to.
+type DependencyMap map[string]map[string]struct{}
 
-type DepencyMap map[string]map[string]struct{}
-
-var waitGroup sync.WaitGroup
-var notifyWG sync.WaitGroup
-
-// Create a map of channels for node task completion signals
-var NodeRelay = make(map[string]chan NodeStatus)
-
+// Graph is the in-memory representation of a DAG. It holds the parsed nodes,
+// their dependency edges, the inter-goroutine relay channels used to propagate
+// completion signals, and the Bubble Tea status channel used to drive the TUI.
 type Graph struct {
-	File          string           `yml:"file"`
-	Name          string           `yml:"name"`
-	Nodes         map[string]*Node `yml:"nodes"`
-	Parents       DepencyMap       `yml:"parents"`
-	Children      DepencyMap       `yml:"children"`
-	StatusChannel chan NodeStatusMsg
+	File          string
+	Name          string
+	Nodes         map[string]*Node
+	NodeOrder     []string // node names in their YAML declaration order
+	Parents       DependencyMap
+	Children      DependencyMap
+	statusChannel chan NodeStatusMsg
+	nodeRelay     map[string]chan NodeStatus // one buffered channel per directed edge, keyed by edgeKey
+	anyFailed     atomic.Bool                // set to true in node.fail(); read after all goroutines finish
+	waitGroup     sync.WaitGroup             // tracks all node execution goroutines
+	notifyWG      sync.WaitGroup             // tracks all child-notification goroutines
 }
 
-var withTaskFailures = false
-
-// ////////////////////////////////////////
-// Graph Execution Function
-// ////////////////////////////////////////
-func (g *Graph) Execute() {
-	dagExecutionStartTime := time.Now()
-
-	model := NewDagModel(g)
-	prog := tea.NewProgram(model)
-	g.StatusChannel = make(chan NodeStatusMsg, len(g.Nodes)*2)
-	done := make(chan struct{}) // Add a done channel for synchronization
-
-	// ////////////////////////////////////////
-	// Forward status messages to Bubble Tea
-	// ////////////////////////////////////////
-	go func() {
-		prog.Send(DagStartMsg{Message: "[🚀 DAG START] executing tasks...\n"})
-
-		for msg := range g.StatusChannel {
-			prog.Send(msg)
-		}
-		done <- struct{}{} // Signal that all messages have been processed
-	}()
-
-	// ////////////////////////////////////////
-	// Initialise channels for task dependencies
-	// ////////////////////////////////////////
-	for nodeKey := range g.Nodes {
-		for parent := range g.Parents[nodeKey] {
-			relayKey := edgeKey(parent, nodeKey)
-			NodeRelay[relayKey] = make(chan NodeStatus, 1)
-		}
-	}
-
-	// ////////////////////////////////////////
-	// Orchestrate tasks in a goroutine
-	// ////////////////////////////////////////
-	go func() {
-		for nodeKey := range g.Nodes {
-			waitGroup.Add(1)
-			g.Nodes[nodeKey].Status = Pending
-			g.StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Pending}
-
-			go func(nodeKey string) {
-				defer waitGroup.Done()
-
-				if !g.waitForParents(nodeKey) {
-					g.skipTaskAndNotifyChildren(nodeKey)
-					return
-				}
-
-				g.Nodes[nodeKey].execute(dagExecutionStartTime)
-			}(nodeKey)
-		}
-
-		waitGroup.Wait()
-		notifyWG.Wait()
-
-		close(g.StatusChannel) // Close when done
-		<-done                 // Wait for all messages to be processed
-
-		prog.Send(tickMsg{}) // Send a tick to ensure final updates are rendered
-		time.Sleep(50 * time.Millisecond)
-
-		// Signal TUI to quit
-		var completeMsg string
-		if withTaskFailures {
-			completeMsg = "[⚠️  DAG COMPLETE] execution completed with failures\n"
-		} else {
-			completeMsg = "[✅ DAG COMPLETE] execution successful\n"
-		}
-		prog.Send(DagCompleteMsg{Message: completeMsg})
-	}()
-
-	// ////////////////////////////////////////
-	// Run the TUI (this blocks until the program exits)
-	// ////////////////////////////////////////
-	if _, err := prog.Run(); err != nil {
-		fmt.Println("Error running TUI:", err)
-	}
+// dagYAML is the top-level structure of a dag.yml file
+type dagYAML struct {
+	Nodes        []Node              `yaml:"nodes"`
+	Dependencies map[string][]string `yaml:"dependencies"`
 }
 
-// Wait for parent tasks to complete
-func (g *Graph) waitForParents(nodeKey string) bool {
-	for parent := range g.Parents[nodeKey] {
-		signal := <-NodeRelay[edgeKey(parent, nodeKey)]
-
-		if signal == Failed || signal == Skipped {
-			withTaskFailures = withTaskFailures || signal == Failed
-
-			if g.Nodes[nodeKey].ParentRule == AllSuccess {
-				return false
-			}
-		}
+// NewGraph constructs a fully initialised Graph from the given YAML dag file.
+// It validates the file path, parses nodes and dependency edges, and creates
+// the .orca log directory. Returns an error if the file is missing, not a
+// .yml file, or contains invalid node/dependency definitions.
+func NewGraph(filePath string) (*Graph, error) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file does not exist: %s", filePath)
 	}
-	return true
+	if !strings.HasSuffix(filePath, ".yml") {
+		return nil, fmt.Errorf("file must be a valid yaml file: %s", filePath)
+	}
+
+	g := &Graph{
+		File:      filePath,
+		Name:      strings.TrimSuffix(filepath.Base(filePath), ".yml"),
+		Nodes:     make(map[string]*Node),
+		Parents:   make(DependencyMap),
+		Children:  make(DependencyMap),
+		nodeRelay: make(map[string]chan NodeStatus),
+	}
+
+	if err := g.parse(); err != nil {
+		return nil, err
+	}
+
+	if err := os.MkdirAll(".orca", os.ModePerm); err != nil {
+		return nil, fmt.Errorf("error creating .orca directory: %w", err)
+	}
+
+	return g, nil
 }
 
-// Skip task and notify children
-func (g *Graph) skipTaskAndNotifyChildren(nodeKey string) {
-	g.StatusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Skipped}
-	for child := range g.Children[nodeKey] {
-		NodeRelay[edgeKey(nodeKey, child)] <- Skipped
-	}
-}
-
-// ////////////////////////////////////////
-// Graph construction functions
-// ////////////////////////////////////////
-
-// Parse nodes from file
-func (g *Graph) parseNodes() error {
-	graphYML, err := os.ReadFile(g.File)
+// parse reads the dag file exactly once and populates g.Nodes, g.Parents,
+// and g.Children. Node defaults (parentRule, retryDelay) are applied here.
+func (g *Graph) parse() error {
+	data, err := os.ReadFile(g.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading dag file: %w", err)
 	}
 
-	// Unmarshal YAML data into NodeYaml struct
-	var nodeYaml NodeYaml
-	err = yaml.Unmarshal(graphYML, &nodeYaml)
-	if err != nil {
-		return err
+	var dag dagYAML
+	if err := yaml.Unmarshal(data, &dag); err != nil {
+		return fmt.Errorf("parsing dag file: %w", err)
 	}
 
-	// Create a map of Nodes from the parsed YAML
-	Nodes := make(map[string]*Node)
-	for _, Node := range nodeYaml.Nodes {
-		NodeCopy := Node // Create a copy of the Node
-		NodeCopy.Status = Pending
-		if NodeCopy.ParentRule == "" {
-			NodeCopy.ParentRule = AllSuccess // Default parentRule if not set
+	for _, n := range dag.Nodes {
+		node := n
+		node.Status = Pending
+		if node.ParentRule == "" {
+			node.ParentRule = AllSuccess
 		}
-
-		if NodeCopy.Retries > 0 && NodeCopy.RetryDelay == 0 {
-			NodeCopy.RetryDelay = 10 // Default retry delay if retries are set but delay is not
-		} else if NodeCopy.Retries == 0 {
-			NodeCopy.RetryDelay = 0 // No retry delay if no retries
+		if node.Retries > 0 && node.RetryDelay == 0 {
+			node.RetryDelay = 10
+		} else if node.Retries == 0 {
+			node.RetryDelay = 0
 		}
-
-		Nodes[Node.Name] = &NodeCopy
+		g.Nodes[node.Name] = &node
+		g.NodeOrder = append(g.NodeOrder, node.Name)
 	}
 
-	g.Nodes = Nodes
-
-	return nil
-}
-
-// Parse edges from File
-func (g *Graph) parseEdges() error {
-	// Open and read the YAML file
-	graphYML, err := os.ReadFile(g.File)
-	if err != nil {
-		return err
-	}
-
-	// Define structure to match YAML format
-	type DependencyYaml struct {
-		Dependencies map[string][]string `yaml:"dependencies"`
-	}
-
-	// Unmarshal YAML data into DependencyYaml struct
-	var dependencyYaml DependencyYaml
-	err = yaml.Unmarshal(graphYML, &dependencyYaml)
-	if err != nil {
-		return err
-	}
-
-	// Loop through the dependencies and add them to the graph
-	for Node, parents := range dependencyYaml.Dependencies {
+	for child, parents := range dag.Dependencies {
 		for _, parent := range parents {
-			err := g.addDependency(Node, parent)
-			if err != nil {
+			if err := g.addDependency(child, parent); err != nil {
 				return err
 			}
 		}
@@ -211,24 +111,135 @@ func (g *Graph) parseEdges() error {
 	return nil
 }
 
-// Add edge to Graph
+// ////////////////////////////////////////
+// Graph Execution
+// ////////////////////////////////////////
+
+// Execute runs all nodes in the DAG concurrently, respecting their dependency
+// order, and renders progress via the Bubble Tea TUI. It blocks until all
+// nodes have finished (or been skipped) and the TUI exits.
+func (g *Graph) Execute() {
+	dagExecutionStartTime := time.Now()
+
+	model := NewDagModel(g)
+	prog := tea.NewProgram(model)
+
+	// Size the buffer to hold every possible status message without blocking:
+	// each node sends 1 initial Pending + up to (2*Retries + 2) execution messages.
+	bufSize := 0
+	for _, node := range g.Nodes {
+		bufSize += 2*node.Retries + 3
+	}
+	g.statusChannel = make(chan NodeStatusMsg, bufSize)
+	done := make(chan struct{})
+
+	// Forward status messages to Bubble Tea
+	go func() {
+		prog.Send(DagStartMsg{Message: "[🚀 DAG START] executing tasks...\n"})
+		for msg := range g.statusChannel {
+			prog.Send(msg)
+		}
+		done <- struct{}{}
+	}()
+
+	// Orchestrate tasks
+	go func() {
+		// Initialise relay channels before any node goroutine is launched,
+		// ensuring every channel exists before a node can attempt to read from it.
+		for nodeKey := range g.Nodes {
+			for parent := range g.Parents[nodeKey] {
+				g.nodeRelay[edgeKey(parent, nodeKey)] = make(chan NodeStatus, 1)
+			}
+		}
+
+		for nodeKey := range g.Nodes {
+			g.waitGroup.Add(1)
+			g.Nodes[nodeKey].Status = Pending
+			g.statusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: g.Nodes[nodeKey].Status}
+
+			go func(nodeKey string) {
+				defer g.waitGroup.Done()
+
+				if !g.waitForParents(nodeKey) {
+					g.skipTaskAndNotifyChildren(nodeKey)
+					return
+				}
+
+				g.Nodes[nodeKey].execute(g, dagExecutionStartTime)
+			}(nodeKey)
+		}
+
+		g.waitGroup.Wait()
+		g.notifyWG.Wait()
+
+		close(g.statusChannel)
+		<-done
+
+		prog.Send(tickMsg{})
+		time.Sleep(50 * time.Millisecond)
+
+		var completeMsg string
+		if g.anyFailed.Load() {
+			completeMsg = "[⚠️  DAG COMPLETE] execution completed with failures\n"
+		} else {
+			completeMsg = "[✅ DAG COMPLETE] execution successful\n"
+		}
+		prog.Send(DagCompleteMsg{Message: completeMsg})
+	}()
+
+	if _, err := prog.Run(); err != nil {
+		log.Errorf("Error running TUI: %v", err)
+	}
+}
+
+// waitForParents blocks until every parent of nodeKey has sent a completion
+// signal on its relay channel. Returns false if the node should be skipped
+// (i.e. a parent failed or was skipped and the node's parentRule is AllSuccess).
+// It has no side effects beyond reading from the relay channels.
+func (g *Graph) waitForParents(nodeKey string) bool {
+	for parent := range g.Parents[nodeKey] {
+		signal := <-g.nodeRelay[edgeKey(parent, nodeKey)]
+		if signal == Failed || signal == Skipped {
+			if g.Nodes[nodeKey].ParentRule == AllSuccess {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// skipTaskAndNotifyChildren marks nodeKey as Skipped, forwards the Skipped
+// signal to all direct children, and closes each relay channel — matching the
+// lifecycle of the success/fail path in notifyChildren.
+func (g *Graph) skipTaskAndNotifyChildren(nodeKey string) {
+	g.statusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Skipped}
+	for child := range g.Children[nodeKey] {
+		key := edgeKey(nodeKey, child)
+		g.nodeRelay[key] <- Skipped
+		close(g.nodeRelay[key])
+	}
+}
+
+// ////////////////////////////////////////
+// Graph construction helpers
+// ////////////////////////////////////////
+
+// addDependency registers a directed edge from parent to child in both the
+// Parents and Children adjacency maps. Returns an error on self-reference or
+// if the edge would introduce a cycle.
 func (g *Graph) addDependency(child, parent string) error {
 	if child == parent {
 		return fmt.Errorf("self-referential dependency: %s", child)
 	}
-
 	if g.dependsOn(parent, child) {
 		return fmt.Errorf("circular dependency: %s, %s", child, parent)
 	}
-
-	// Add Edges
 	addEdge(g.Parents, child, parent)
 	addEdge(g.Children, parent, child)
-
 	return nil
 }
 
-// True if child node depends on parent node (either directly or indirectly)
+// dependsOn reports whether child is a transitive descendant of parent.
 func (g *Graph) dependsOn(child, parent string) bool {
 	allChildren := make(map[string]struct{})
 	g.findAllChildren(parent, allChildren)
@@ -236,12 +247,12 @@ func (g *Graph) dependsOn(child, parent string) bool {
 	return isDependant
 }
 
-// Find All Dependency Edges (direct and indriect)
+// findAllChildren recursively collects all transitive children of parent into
+// the provided set.
 func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
 	if _, ok := g.Nodes[parent]; !ok {
 		return
 	}
-
 	for child, nextChild := range g.Children[parent] {
 		if _, ok := children[child]; !ok {
 			children[child] = nextChild
@@ -250,17 +261,14 @@ func (g *Graph) findAllChildren(parent string, children map[string]struct{}) {
 	}
 }
 
-// ////////////////////////////////////////
-// Utility Functions
-// ////////////////////////////////////////
-
-// Generate edge key
+// edgeKey returns the map key used to identify the relay channel for the
+// directed edge from -> to.
 func edgeKey(from, to string) string {
 	return fmt.Sprintf("%s->%s", from, to)
 }
 
-// Add edge
-func addEdge(dm DepencyMap, from, to string) {
+// addEdge inserts to into the adjacency set of from within dm.
+func addEdge(dm DependencyMap, from, to string) {
 	nodes, ok := dm[from]
 	if !ok {
 		nodes = make(map[string]struct{})

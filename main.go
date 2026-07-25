@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	lib "github.com/5amCurfew/orca/lib"
@@ -22,24 +21,22 @@ var rootCmd = &cobra.Command{
 	Long:    `orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var cfgPath string
-		if len(args) == 0 {
-			cfgPath = "dag.yml"
-		} else {
+		cfgPath := "dag.yml"
+		if len(args) > 0 {
 			cfgPath = args[0]
 		}
 
-		err := lib.Init(cfgPath)
+		g, err := lib.NewGraph(cfgPath)
 		if err != nil {
 			log.Fatalf("Error initialising graph %s: %s", cfgPath, err)
 		}
-		lib.G.Execute()
+		g.Execute()
 	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "[INIT] error using orca: '%s'", err)
+		log.Errorf("[INIT] error using orca: %s", err)
 		os.Exit(1)
 	}
 }
