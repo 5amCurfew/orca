@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.5.0"
+var version = "0.6.1"
 
 func main() {
 	Execute()
@@ -21,14 +21,14 @@ var rootCmd = &cobra.Command{
 	Long:    `orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		cfgPath := "dag.yml"
+		file := "dag.yml"
 		if len(args) > 0 {
-			cfgPath = args[0]
+			file = args[0]
 		}
 
-		g, err := lib.NewGraph(cfgPath)
+		g, err := lib.NewGraph(file)
 		if err != nil {
-			log.Fatalf("Error initialising graph %s: %s", cfgPath, err)
+			log.Fatalf("Error initialising graph %s: %s", file, err)
 		}
 		g.Execute()
 	},
