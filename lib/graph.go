@@ -26,6 +26,7 @@ type executionState struct {
 	anyFailed     atomic.Bool                // set to true in node.fail(); read after all goroutines finish
 	waitGroup     sync.WaitGroup             // tracks all node execution goroutines
 	notifyWG      sync.WaitGroup             // tracks all child-notification goroutines
+	semaphore     chan struct{}              // limits concurrent task execution; nil means unlimited
 }
 
 // Graph is the in-memory representation of a DAG. It holds the parsed nodes
@@ -134,7 +135,8 @@ func (g *Graph) parse() error {
 // Execute runs all nodes in the DAG concurrently, respecting their dependency
 // order, and renders progress via the Bubble Tea TUI. It blocks until all
 // nodes have finished (or been skipped) and the TUI exits.
-func (g *Graph) Execute() {
+// maxParallel limits how many nodes may run simultaneously; 0 means unlimited.
+func (g *Graph) Execute(maxParallel int) {
 	dagExecutionStartTime := time.Now()
 
 	model := NewDagModel(g)
@@ -147,6 +149,9 @@ func (g *Graph) Execute() {
 		bufSize += 2*node.Spec.Retries + 3
 	}
 	g.exec.statusChannel = make(chan NodeStatusMsg, bufSize)
+	if maxParallel > 0 {
+		g.exec.semaphore = make(chan struct{}, maxParallel)
+	}
 	done := make(chan struct{})
 
 	// Forward status messages to Bubble Tea
@@ -179,6 +184,13 @@ func (g *Graph) Execute() {
 				if !g.waitForParents(nodeKey) {
 					g.skipTaskAndNotifyChildren(nodeKey)
 					return
+				}
+
+				if g.exec.semaphore != nil {
+					g.Nodes[nodeKey].State.Status = Queued
+					g.exec.statusChannel <- NodeStatusMsg{NodeKey: nodeKey, Status: Queued}
+					g.exec.semaphore <- struct{}{}
+					defer func() { <-g.exec.semaphore }()
 				}
 
 				g.Nodes[nodeKey].execute(g, dagExecutionStartTime)

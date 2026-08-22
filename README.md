@@ -33,14 +33,19 @@ Locally: `git clone git@github.com:5amCurfew/orca.git`; `make build`
 via Homebrew: `brew tap 5amCurfew/5amCurfew; brew install 5amCurfew/5amCurfew/orca`
 
 ```bash
+$ orca -h
 orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph
+
+Arguments:
+  PATH_TO_DAG_FILE   path to the DAG YAML file to execute (default: dag.yml)
 
 Usage:
   orca [PATH_TO_DAG_FILE] [flags]
 
 Flags:
-  -h, --help      help for orca
-  -v, --version   version for orca
+  -h, --help               help for orca
+  -p, --max-parallel int   maximum number of tasks to run in parallel (default: unlimited)
+  -v, --version            version for orca
 ```
 
 ### :pencil: DSL for .orca

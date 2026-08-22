@@ -58,6 +58,7 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 // colour the entire row in View.
 var rowStyles = map[NodeStatus]lipgloss.Style{
 	Pending:    lipgloss.NewStyle().Foreground(lipgloss.Color("245")), // grey
+	Queued:     lipgloss.NewStyle().Foreground(lipgloss.Color("250")), // light grey
 	Running:    lipgloss.NewStyle().Foreground(lipgloss.Color("15")),  // white
 	Success:    lipgloss.NewStyle().Foreground(lipgloss.Color("34")),  // green
 	Failed:     lipgloss.NewStyle().Foreground(lipgloss.Color("160")), // red
@@ -161,6 +162,8 @@ func (m *DagModel) View() string {
 		switch v {
 		case Pending:
 			status = "[ ] Pending "
+		case Queued:
+			status = "[~] Queued  "
 		case Running:
 			status = fmt.Sprintf(" %s  Running ", spinnerFrames[m.SpinnerFrame])
 		case Success:

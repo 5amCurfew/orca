@@ -19,6 +19,7 @@ type NodeStatus string
 
 const (
 	Pending     NodeStatus = "pending"    // waiting for parents to complete
+	Queued      NodeStatus = "queued"     // parents done, waiting for a concurrency slot
 	Running     NodeStatus = "running"    // bash command is executing
 	Success     NodeStatus = "success"    // command exited with code 0
 	Skipped     NodeStatus = "skipped"    // not run because a parent failed/was skipped
