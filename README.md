@@ -17,12 +17,11 @@
   - [3. Concurrent execution](#3-concurrent-execution)
 - [:rocket: Example](#rocket-example)
 
-**v0.6.2**
+**v0.7.0**
 
 #### TODO
 
 * Conditional edges (dependencies depending on results)
-* Visualisation command
 
 ### :computer: Installation
 
@@ -34,16 +33,49 @@ via Homebrew: `brew tap 5amCurfew/5amCurfew; brew install 5amCurfew/5amCurfew/or
 $ orca -h
 orca is a bash command orchestrator that can be used to run terminal commands in a directed acyclic graph
 
+Usage:
+  orca [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  run         execute the DAG
+  viz         visualise the DAG structure in the terminal
+
+Flags:
+  -h, --help      help for orca
+  -v, --version   version for orca
+
+Use "orca [command] --help" for more information about a command.
+```
+
+```bash
+$ orca run -h
+Execute all nodes in the DAG, respecting dependency order.
+
 Arguments:
   PATH_TO_DAG_FILE   path to the DAG YAML file to execute (default: dag.yml)
 
 Usage:
-  orca [PATH_TO_DAG_FILE] [flags]
+  orca run [PATH_TO_DAG_FILE] [flags]
 
 Flags:
-  -h, --help               help for orca
+  -h, --help               help for run
   -p, --max-parallel int   maximum number of tasks to run in parallel (default: unlimited)
-  -v, --version            version for orca
+```
+
+```bash
+$ orca viz -h
+Print the DAG as a dependency tree.
+
+Arguments:
+  PATH_TO_DAG_FILE   path to the DAG YAML file to visualise (default: dag.yml)
+
+Usage:
+  orca viz [PATH_TO_DAG_FILE] [flags]
+
+Flags:
+  -h, --help   help for viz
 ```
 
 ### :pencil: DSL for .orca
