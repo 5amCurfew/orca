@@ -17,12 +17,10 @@
   - [3. Concurrent execution](#3-concurrent-execution)
 - [:rocket: Example](#rocket-example)
 
-**v0.6.1**
+**v0.6.2**
 
 #### TODO
 
-* Max parallel node excution config
-* Introduce `queued` state for above
 * Conditional edges (dependencies depending on results)
 * Visualisation command
 
